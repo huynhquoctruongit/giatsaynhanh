@@ -120,7 +120,6 @@ function ReceiptPreview(p: PreviewProps) {
           </div>
         )}
       </div>
-
       <div className="border-t border-gray-300 mx-3" />
 
       {/* ── Customer name (very prominent) ── */}

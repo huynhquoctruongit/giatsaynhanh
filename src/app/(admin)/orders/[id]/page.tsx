@@ -184,23 +184,24 @@ function printReceipt(html: string) {
     toast.error('Popup bị chặn. Hãy cho phép popup cho trang này.');
     return;
   }
+
+  let printed = false;
+  const doPrint = () => {
+    if (printed) return;
+    printed = true;
+    popup.print();
+    popup.addEventListener('afterprint', () => popup.close(), { once: true });
+  };
+
   popup.document.open();
   popup.document.write(html);
   popup.document.close();
   popup.focus();
-  // Đợi tài nguyên load xong rồi in
-  popup.onload = () => {
-    popup.print();
-    // Tự đóng popup sau khi in (hoặc hủy)
-    popup.addEventListener('afterprint', () => popup.close());
-  };
-  // Fallback nếu onload không fire (không có hình ảnh)
-  setTimeout(() => {
-    if (!popup.closed) {
-      popup.print();
-      popup.addEventListener('afterprint', () => popup.close());
-    }
-  }, 400);
+
+  // onload fires when images (logo/QR) finish loading
+  popup.onload = doPrint;
+  // Fallback for documents with no external resources (load fires synchronously before onload is set)
+  setTimeout(doPrint, 600);
 }
 
 // ─── Inline receipt preview (fluid, fills container) ─────────────────────────

@@ -111,6 +111,23 @@ export interface BookingPrefillItem {
   unitPrice: number;
 }
 
+export interface BookingPrefillActiveOrder {
+  id: string;
+  code: string;
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: string;
+  pickupAt: string | null;
+  items: { name: string; quantity: number; weight: number | null }[];
+}
+
+export interface BookingPrefillService {
+  id: string;
+  name: string;
+  unit: string;
+  price: number;
+}
+
 export interface BookingPrefill {
   sourceOrder: { id: string; code: string; createdAt: string };
   customer: {
@@ -120,6 +137,8 @@ export interface BookingPrefill {
     address: string | null;
   };
   items: BookingPrefillItem[];
+  activeOrders: BookingPrefillActiveOrder[];
+  services: BookingPrefillService[];
 }
 
 export type BookingStatusValue = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'CONVERTED';

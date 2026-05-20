@@ -2,7 +2,34 @@
   "permissions": {
     "allow": [
       "Bash(npx prisma *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(curl -s https://registry.npmjs.org/react-native-sunmi-inner-printer)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Latest:', d.get\\('dist-tags',{}\\).get\\('latest'\\)\\); print\\('Versions:', list\\(d.get\\('versions',{}\\).keys\\(\\)\\)[-10:]\\)\")",
+      "Bash(curl -s https://registry.npmjs.org/__TRACKED_VAR__)",
+      "Bash(curl -s \"https://registry.npmjs.org/react-native-sunmi-printer\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s \"https://registry.npmjs.org/-/v1/search?text=sunmi+printer+react-native&size=10\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/mitsuharu/react-native-sunmi-printer-library/main/README.md\")",
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf laundrypos-bootstrap)",
+      "Bash(npx --yes @react-native-community/cli@13.6.6 init laundrypos --version 0.73.2 --directory laundrypos-bootstrap --skip-install --skip-git-init --pm npm)",
+      "Read(//Users/mac/Library/Android/**)",
+      "Read(//opt/homebrew/share/**)",
+      "Read(//Users/mac/Android/**)",
+      "Read(//Users/mac/**)",
+      "Bash(brew list *)",
+      "Bash(export ANDROID_HOME=\"/usr/local/share/android-commandlinetools\")",
+      "Bash(export PATH=\"$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH\")",
+      "Read(//usr/local/share/android-commandlinetools/cmdline-tools/latest/bin/**)",
+      "Bash(yes)",
+      "Bash(sdkmanager --licenses)",
+      "Bash(export PATH=\"$ANDROID_HOME/cmdline-tools/latest/bin:$PATH\")",
+      "Bash(sdkmanager \"platform-tools\" \"platforms;android-34\" \"build-tools;34.0.0\" \"ndk;25.1.8937393\")",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(xargs -I{} sh -c 'echo \"PID {} - $\\(ps -p {} -o comm= 2>/dev/null\\)\"')"
     ]
   }
 }
