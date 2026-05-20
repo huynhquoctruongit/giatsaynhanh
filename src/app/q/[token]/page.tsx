@@ -124,20 +124,32 @@ function PublicBookingFlow({
 }) {
   const [submitted, setSubmitted] = useState<string | null>(null);
 
+  // Fallback an toàn: backend cũ có thể chưa trả về 2 field này
+  const activeOrders = prefill.activeOrders ?? [];
+  const services = prefill.services ?? [];
+  const items = prefill.items ?? [];
+  const safePrefill: BookingPrefill = {
+    ...prefill,
+    activeOrders,
+    services,
+    items,
+  };
+
   if (submitted) {
     return <SuccessCard code={submitted} />;
   }
 
   return (
     <div className="space-y-4">
-      {prefill.activeOrders.length > 0 && (
-        <ActiveOrdersCard orders={prefill.activeOrders} />
+      {activeOrders.length > 0 ? (
+        <ActiveOrdersCard orders={activeOrders} />
+      ) : (
+        <NoActiveOrderCard />
       )}
-      {prefill.activeOrders.length === 0 && <NoActiveOrderCard />}
 
       <RebookForm
         token={token}
-        prefill={prefill}
+        prefill={safePrefill}
         onSubmitted={(code) => setSubmitted(code)}
       />
     </div>
