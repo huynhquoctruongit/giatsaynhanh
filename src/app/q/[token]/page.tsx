@@ -140,40 +140,38 @@ export default function PublicOrderPage({
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-6 sm:py-10">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-5">
       <div className="mx-auto max-w-xl space-y-4">
-        <div className="flex animate-in flex-col items-center gap-2 fade-in slide-in-from-top-2 text-center duration-500">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <Package className="h-7 w-7" />
+        {/* Header — gọn */}
+        <div className="flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-400">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow">
+            <Package className="h-4 w-4" />
           </div>
-          <h1 className="text-2xl font-bold">Đặt giặt nhanh</h1>
-          {prefillQuery.data?.customer.name && (
-            <p className="text-sm text-muted-foreground">
-              Xin chào <strong>{prefillQuery.data.customer.name}</strong>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight">
+              {prefillQuery.data?.customer.name
+                ? `Xin chào, ${prefillQuery.data.customer.name}`
+                : 'Đặt giặt nhanh'}
             </p>
-          )}
+            <p className="text-xs text-muted-foreground">Dịch vụ giao nhận đồ tại nhà</p>
+          </div>
         </div>
 
         {prefillQuery.isLoading && (
           <Card>
-            <CardContent className="space-y-3 p-6">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-40 w-full" />
+            <CardContent className="space-y-3 p-5">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-12 w-full" />
             </CardContent>
           </Card>
         )}
 
         {prefillQuery.isError && (
           <Card className="animate-in border-rose-200 fade-in zoom-in-95 duration-300">
-            <CardHeader>
-              <CardTitle className="text-rose-600">Không mở được trang</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
+            <CardContent className="p-4">
+              <p className="font-medium text-rose-600">Không mở được trang</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {extractError(prefillQuery.error).message}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Mã QR có thể đã hết hạn. Vui lòng liên hệ tiệm để được hỗ trợ.
               </p>
             </CardContent>
           </Card>
@@ -183,14 +181,11 @@ export default function PublicOrderPage({
           <PublicBookingFlow token={token} prefill={prefillQuery.data} />
         )}
 
-        <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          Trang công khai · không yêu cầu đăng nhập
-        </div>
-        <div className="text-center text-xs">
-          <Link href="/login" className="text-primary underline">
-            Bạn là nhân viên? Đăng nhập
-          </Link>
+        <div className="flex items-center justify-center gap-1.5 pt-1 text-xs text-muted-foreground">
+          <ShieldCheck className="h-3 w-3" />
+          <span>Không yêu cầu đăng nhập</span>
+          <span>·</span>
+          <Link href="/login" className="text-primary underline">Nhân viên</Link>
         </div>
       </div>
     </div>
@@ -257,12 +252,7 @@ function PublicBookingFlow({
 
   return (
     <div className="space-y-4">
-      {activeOrders.length > 0 ? (
-        <ActiveOrdersCard orders={activeOrders} />
-      ) : (
-        <NoActiveOrderCard />
-      )}
-
+      {/* Booking form — nổi bật, lên trước */}
       {view === 'simple' && canQuickRebook && (
         <SimpleRebookView
           prefill={safePrefill}
@@ -287,6 +277,11 @@ function PublicBookingFlow({
             onGoBack={() => setView('simple')}
           />
         </div>
+      )}
+
+      {/* Trạng thái đơn — xuống cuối */}
+      {activeOrders.length > 0 && (
+        <ActiveOrdersCard orders={activeOrders} />
       )}
 
       <RebookConfirmDialog
@@ -325,49 +320,28 @@ function formatSlotText(slot: TimeSlot | undefined): string {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-function NoActiveOrderCard() {
-  return (
-    <Card className="animate-in border-dashed fade-in slide-in-from-bottom-2 duration-500">
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-          <Package className="h-5 w-5" />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Bạn chưa có đơn nào đang xử lý ở tiệm.
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ActiveOrdersCard({ orders }: { orders: BookingPrefillActiveOrder[] }) {
   return (
-    <Card className="animate-in border-blue-200 bg-blue-50/50 shadow-sm fade-in slide-in-from-bottom-2 duration-500">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="h-4 w-4 text-blue-600" />
-          Trạng thái đơn
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 pt-0">
-        {orders.map((o) => (
-          <div
-            key={o.id}
-            className="rounded-lg border bg-white px-3 py-2.5 shadow-sm"
-          >
-            <div className="mb-1 flex items-center justify-between gap-2">
-              <PublicStatusBadge status={o.status} />
-              <span className="text-[11px] text-muted-foreground">
-                {formatDateTime(o.createdAt)}
-              </span>
-            </div>
-            <p className="text-sm font-medium leading-snug">
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 space-y-1.5">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" />
+        Đơn đang xử lý
+      </p>
+      {orders.map((o) => (
+        <div
+          key={o.id}
+          className="flex items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2.5 shadow-sm"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium leading-snug">
               {joinItems(o.items) || '—'}
             </p>
+            <p className="text-[11px] text-muted-foreground">{formatDateTime(o.createdAt)}</p>
           </div>
-        ))}
-      </CardContent>
-    </Card>
+          <PublicStatusBadge status={o.status} />
+        </div>
+      ))}
+    </div>
   );
 }
 
