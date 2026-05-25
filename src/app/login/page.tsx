@@ -73,8 +73,8 @@ function LoginInner() {
               <Input
                 id="email"
                 type="email"
-                autoComplete="email"
-                placeholder="admin@laundry.local"
+                autoComplete="username"
+                placeholder="Email"
                 {...register('email')}
               />
               {errors.email && (
@@ -96,9 +96,6 @@ function LoginInner() {
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Mặc định: <code>admin@laundry.local</code> / <code>admin123</code>
-            </p>
           </form>
         </CardContent>
       </Card>

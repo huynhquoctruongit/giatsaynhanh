@@ -1,7 +1,6 @@
 'use client';
 
 import { use, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Check,
@@ -148,12 +147,14 @@ export default function PublicOrderPage({
             <Package className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold leading-tight">
+            <p className="truncate text-sm font-bold uppercase leading-tight tracking-wide">
+              Giặt Sấy Nhanh
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
               {prefillQuery.data?.customer.name
                 ? `Xin chào, ${prefillQuery.data.customer.name}`
-                : 'Đặt giặt nhanh'}
+                : 'Dịch vụ giao nhận đồ tại nhà'}
             </p>
-            <p className="text-xs text-muted-foreground">Dịch vụ giao nhận đồ tại nhà</p>
           </div>
         </div>
 
@@ -184,8 +185,6 @@ export default function PublicOrderPage({
         <div className="flex items-center justify-center gap-1.5 pt-1 text-xs text-muted-foreground">
           <ShieldCheck className="h-3 w-3" />
           <span>Không yêu cầu đăng nhập</span>
-          <span>·</span>
-          <Link href="/login" className="text-primary underline">Nhân viên</Link>
         </div>
       </div>
     </div>
