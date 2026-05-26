@@ -26,6 +26,7 @@ export interface ShopSettings {
   loyaltyPointsRate: number | null;
   deliveryEnabled: boolean;
   deliveryFee: number | null;
+  bookingShippingFee: number | null;
   allowNoShiftOrder: boolean;
 }
 

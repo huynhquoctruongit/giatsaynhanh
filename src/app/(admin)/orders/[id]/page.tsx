@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { orderApi } from '@/services/api/order.api';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
+import { calcInvoiceTotals } from '@/lib/invoice-totals';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   NEXT_STATUS_TRANSITIONS,
@@ -42,11 +43,35 @@ function BarcodeGraphic({ code }: { code: string }) {
 interface OrderData {
   code: string;
   createdAt: string;
+  pickupAt?: string | null;
+  fromBooking?: boolean;
+  booking?: { code: string } | null;
   customer: { name: string; phone?: string; address?: string | null } | null;
   items: { name: string; quantity: number; weight?: number | null; unitPrice: number }[];
   totalAmount: number;
   discountAmount?: number;
   qr?: { url: string } | null;
+}
+
+function deliveryBookingTagHtml(
+  order: Pick<OrderData, 'fromBooking' | 'pickupAt' | 'booking'>,
+  base: number,
+  sm: number,
+): string {
+  if (!order.fromBooking) return '';
+  const bookingLine = order.booking?.code
+    ? `<p style="font-size:${sm}px;color:#444;margin-top:2px">${order.booking.code}</p>`
+    : '';
+  const pickupLine = order.pickupAt
+    ? `<p style="font-size:${sm}px;margin-top:2px">Hẹn lấy: ${formatDateTime(order.pickupAt)}</p>`
+    : '';
+  return `
+  <div style="margin:6px 10px;padding:8px;border:2px solid #000;text-align:center">
+    <p style="font-weight:900;font-size:${base + 3}px;letter-spacing:1px">GIAO NHẬN</p>
+    <p style="font-size:${sm}px;margin-top:2px">Đơn đặt qua mã QR — shipper đi giao</p>
+    ${bookingLine}
+    ${pickupLine}
+  </div>`;
 }
 
 function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: string): string {
@@ -77,8 +102,16 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     </tr>`;
   }).join('');
 
-  const discount = Number(order.discountAmount ?? 0);
-  const remaining = order.totalAmount - discount;
+  const { subtotal, shippingFee, discount, grandTotal } = calcInvoiceTotals(
+    {
+      totalAmount: order.totalAmount,
+      discountAmount: order.discountAmount,
+      fromBooking: order.fromBooking,
+    },
+    settings,
+  );
+  const showGrandTotal = shippingFee > 0 || (settings.invoiceShowDebt && discount > 0);
+  const subtotalLabel = shippingFee > 0 ? 'Tạm tính' : 'Tổng cộng';
 
   const date = new Date(order.createdAt);
   const dateStr = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
@@ -123,6 +156,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <div style="padding: 4px 10px; text-align: center;">
     <p style="font-weight:700">HÓA ĐƠN</p>
     <p style="font-size:${sm}px;color:#555">${order.code} · ${dateStr}</p>
+    ${deliveryBookingTagHtml(order, base, sm)}
     ${settings.invoiceShowBarcode ? barsHtml : ''}
   </div>
 
@@ -150,16 +184,24 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <hr class="divider"/>
 
   <div style="padding: 2px 10px 4px;">
-    <div class="total-row bold" style="font-size:${base}px">
-      <span>Tổng cộng</span><span>${order.totalAmount.toLocaleString('vi-VN')}đ</span>
-    </div>
-    ${settings.invoiceShowDebt ? `
     <div class="total-row" style="font-size:${sm}px;color:#555">
-      <span>Giảm giá</span><span>${discount.toLocaleString('vi-VN')}đ</span>
+      <span>${subtotalLabel}</span><span>${subtotal.toLocaleString('vi-VN')}đ</span>
     </div>
-    <div class="total-row bold" style="font-size:${base+1}px">
-      <span>Còn phải thu</span><span>${remaining.toLocaleString('vi-VN')}đ</span>
+    ${shippingFee > 0 ? `
+    <div class="total-row" style="font-size:${sm}px;color:#555">
+      <span>Phí ship</span><span>+ ${shippingFee.toLocaleString('vi-VN')}đ</span>
     </div>` : ''}
+    ${settings.invoiceShowDebt && discount > 0 ? `
+    <div class="total-row" style="font-size:${sm}px;color:#555">
+      <span>Giảm giá</span><span>- ${discount.toLocaleString('vi-VN')}đ</span>
+    </div>` : ''}
+    ${showGrandTotal ? `
+    <div class="total-row bold" style="font-size:${base + 1}px">
+      <span>Tổng cộng</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
+    </div>` : `
+    <div class="total-row bold" style="font-size:${base}px">
+      <span>Tổng cộng</span><span>${subtotal.toLocaleString('vi-VN')}đ</span>
+    </div>`}
   </div>
 
   ${settings.invoiceShowQR && qrDataUrl ? `
@@ -221,6 +263,17 @@ function InvoicePreviewPanel({
   const date = new Date(order.createdAt);
   const dateStr = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
 
+  const { subtotal, shippingFee, discount, grandTotal } = calcInvoiceTotals(
+    {
+      totalAmount: Number(order.totalAmount),
+      discountAmount: order.discountAmount,
+      fromBooking: order.fromBooking,
+    },
+    settings,
+  );
+  const showGrandTotal = shippingFee > 0 || (settings.invoiceShowDebt && discount > 0);
+  const subtotalLabel = shippingFee > 0 ? 'Tạm tính' : 'Tổng cộng';
+
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: '100%', lineHeight: 1.4 }}>
         {/* Header */}
@@ -248,6 +301,27 @@ function InvoicePreviewPanel({
           <div style={{ padding: '4px 10px', textAlign: 'center' }}>
             <p style={{ fontWeight: 700 }}>HÓA ĐƠN</p>
             <p style={{ fontSize: sm, color: '#555' }}>{order.code} · {dateStr}</p>
+            {order.fromBooking && (
+              <div
+                style={{
+                  margin: '6px 10px',
+                  padding: 8,
+                  border: '2px solid #000',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ fontWeight: 900, fontSize: base + 3, letterSpacing: 1 }}>GIAO NHẬN</p>
+                <p style={{ fontSize: sm, marginTop: 2 }}>Đơn đặt qua mã QR — shipper đi giao</p>
+                {order.booking?.code && (
+                  <p style={{ fontSize: sm, color: '#444', marginTop: 2, fontFamily: 'monospace' }}>
+                    {order.booking.code}
+                  </p>
+                )}
+                {order.pickupAt && (
+                  <p style={{ fontSize: sm, marginTop: 2 }}>Hẹn lấy: {formatDateTime(order.pickupAt)}</p>
+                )}
+              </div>
+            )}
             {settings.invoiceShowBarcode && <BarcodeGraphic code={order.code} />}
           </div>
 
@@ -294,22 +368,26 @@ function InvoicePreviewPanel({
 
           {/* Totals */}
           <div style={{ padding: '2px 10px 4px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base }}>
-              <span>Tổng cộng</span>
-              <span>{Number(order.totalAmount).toLocaleString('vi-VN')}đ</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+              <span>{subtotalLabel}</span>
+              <span>{subtotal.toLocaleString('vi-VN')}đ</span>
             </div>
-            {settings.invoiceShowDebt && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
-                  <span>Giảm giá</span>
-                  <span>{Number(order.discountAmount ?? 0).toLocaleString('vi-VN')}đ</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base + 1 }}>
-                  <span>Còn phải thu</span>
-                  <span>{(Number(order.totalAmount) - Number(order.discountAmount ?? 0)).toLocaleString('vi-VN')}đ</span>
-                </div>
-              </>
+            {shippingFee > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+                <span>Phí ship</span>
+                <span>+ {shippingFee.toLocaleString('vi-VN')}đ</span>
+              </div>
             )}
+            {settings.invoiceShowDebt && discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+                <span>Giảm giá</span>
+                <span>- {discount.toLocaleString('vi-VN')}đ</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base + (showGrandTotal ? 1 : 0) }}>
+              <span>Tổng cộng</span>
+              <span>{(showGrandTotal ? grandTotal : subtotal).toLocaleString('vi-VN')}đ</span>
+            </div>
           </div>
 
           {/* QR */}

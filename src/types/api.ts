@@ -71,6 +71,7 @@ export interface Order {
   code: string;
   status: OrderStatus;
   totalAmount: number;
+  discountAmount?: number;
   note: string | null;
   pickupAt: string | null;
   deliveredAt: string | null;
@@ -79,6 +80,8 @@ export interface Order {
   customer: OrderCustomerSummary | null;
   items: OrderItem[];
   qr: { token: string; url: string };
+  fromBooking?: boolean;
+  booking?: { id: string; code: string } | null;
 }
 
 export interface PublicOrder {
