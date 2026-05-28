@@ -62,7 +62,7 @@ function LoginInner() {
             <Package className="h-6 w-6" />
           </div>
           <div>
-            <CardTitle className="text-2xl">Laundry QR Manager</CardTitle>
+            <CardTitle className="text-2xl">GIẶT SẤY NHANH - QUẢN LÝ ĐƠN</CardTitle>
             <CardDescription>Đăng nhập để quản lý đơn giặt sấy</CardDescription>
           </div>
         </CardHeader>
