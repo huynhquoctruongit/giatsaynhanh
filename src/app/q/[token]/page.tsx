@@ -359,7 +359,7 @@ function DeliverySlotPicker({
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5 text-sm font-semibold">
         <Clock className="h-3.5 w-3.5" />
-        Bạn muốn lấy đồ lúc nào?
+        Bạn muốn tôi giao đồ lúc nào?
       </Label>
       <div className="grid grid-cols-2 gap-2">
         {slots.map((s) => {
