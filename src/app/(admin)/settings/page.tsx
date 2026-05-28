@@ -282,7 +282,11 @@ export default function SettingsPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<ShopSettings>) => settingsApi.update(payload),
-    onSuccess: () => { toast.success('Đã lưu cài đặt'); queryClient.invalidateQueries({ queryKey: ['settings'] }); },
+    onSuccess: (updated) => {
+      // Cập nhật cache trực tiếp bằng kết quả PATCH — tránh GET phụ và race condition
+      queryClient.setQueryData(['settings'], updated);
+      toast.success('Đã lưu cài đặt');
+    },
     onError: (err) => toast.error(extractError(err).message),
   });
 
