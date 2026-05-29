@@ -38,11 +38,20 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface WholesaleTier {
+  minQty: number;
+  price: number;
+}
+
 export interface Product {
   id: string;
   name: string;
   unit: string;
   price: number;
+  importPrice?: number | null;
+  costPrice?: number | null;
+  wholesaleEnabled?: boolean;
+  wholesaleTiers?: WholesaleTier[] | null;
   isActive: boolean;
   note: string | null;
   createdAt: string;

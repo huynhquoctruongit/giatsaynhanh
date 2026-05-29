@@ -1,5 +1,5 @@
 import { apiClient, unwrap } from './client';
-import type { PaginatedResult, Product } from '@/types/api';
+import type { PaginatedResult, Product, WholesaleTier } from '@/types/api';
 
 export interface ProductListQuery {
   search?: string;
@@ -12,6 +12,10 @@ export interface ProductPayload {
   name: string;
   unit?: string;
   price: number;
+  importPrice?: number;
+  costPrice?: number;
+  wholesaleEnabled?: boolean;
+  wholesaleTiers?: WholesaleTier[] | null;
   isActive?: boolean;
   note?: string;
 }

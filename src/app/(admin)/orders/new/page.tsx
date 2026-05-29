@@ -24,7 +24,7 @@ import { customerApi } from '@/services/api/customer.api';
 import { productApi } from '@/services/api/product.api';
 import { orderApi } from '@/services/api/order.api';
 import { extractError } from '@/services/api/client';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getEffectivePrice } from '@/lib/utils';
 import {
   orderFormSchema,
   type OrderFormInput,
@@ -85,9 +85,19 @@ export default function NewOrderPage() {
   const onPickProduct = (index: number, productId: string) => {
     const product = productsQuery.data?.items.find((p) => p.id === productId);
     if (!product) return;
+    const qty = Number(items[index]?.quantity || 1);
     setValue(`items.${index}.productId`, product.id);
     setValue(`items.${index}.name`, product.name);
-    setValue(`items.${index}.unitPrice`, product.price);
+    setValue(`items.${index}.unitPrice`, getEffectivePrice(product, qty));
+  };
+
+  const onQuantityChange = (index: number, qty: number) => {
+    setValue(`items.${index}.quantity`, qty);
+    const pid = items[index]?.productId;
+    if (!pid) return;
+    const product = productsQuery.data?.items.find((p) => p.id === pid);
+    if (!product?.wholesaleEnabled) return;
+    setValue(`items.${index}.unitPrice`, getEffectivePrice(product, qty));
   };
 
   return (
@@ -202,6 +212,7 @@ export default function NewOrderPage() {
                       type="number"
                       min={1}
                       {...register(`items.${index}.quantity`)}
+                      onChange={(e) => onQuantityChange(index, Number(e.target.value) || 1)}
                     />
                   </div>
                   <div className="col-span-4 space-y-1 md:col-span-2">
