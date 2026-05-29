@@ -91,8 +91,8 @@ export default function NewOrderPage() {
     setValue(`items.${index}.unitPrice`, getEffectivePrice(product, qty));
   };
 
+  /** Chỉ cập nhật đơn giá sỉ — KHÔNG setValue quantity (để RHF tự xử lý) */
   const onQuantityChange = (index: number, qty: number) => {
-    setValue(`items.${index}.quantity`, qty);
     const pid = items[index]?.productId;
     if (!pid) return;
     const product = productsQuery.data?.items.find((p) => p.id === pid);
@@ -211,8 +211,12 @@ export default function NewOrderPage() {
                     <Input
                       type="number"
                       min={1}
-                      {...register(`items.${index}.quantity`)}
-                      onChange={(e) => onQuantityChange(index, Number(e.target.value) || 1)}
+                      {...register(`items.${index}.quantity`, {
+                        onChange: (e) => {
+                          const qty = parseInt(e.target.value, 10);
+                          if (!isNaN(qty) && qty >= 1) onQuantityChange(index, qty);
+                        },
+                      })}
                     />
                   </div>
                   <div className="col-span-4 space-y-1 md:col-span-2">
