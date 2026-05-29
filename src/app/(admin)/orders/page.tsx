@@ -9,13 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -28,7 +21,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { EmptyState } from '@/components/common/empty-state';
 import { OrderStatusBadge } from '@/components/common/order-status-badge';
 import { orderApi } from '@/services/api/order.api';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   ORDER_STATUS_LABEL,
   type OrderStatus,
@@ -37,11 +30,24 @@ import { useDebounce } from '@/hooks/use-debounce';
 
 const ALL = '__ALL__';
 
+const STATUS_FILTERS: { value: string; label: string }[] = [
+  { value: ALL, label: 'Tất cả' },
+  ...( Object.entries(ORDER_STATUS_LABEL) as [OrderStatus, string][]).map(
+    ([value, label]) => ({ value, label }),
+  ),
+];
+
 export default function OrdersPage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search);
   const [status, setStatus] = useState<string>(ALL);
+
+  const countsQuery = useQuery({
+    queryKey: ['orders', 'status-counts'],
+    queryFn: () => orderApi.statusCounts(),
+    staleTime: 30_000,
+  });
 
   const query = useQuery({
     queryKey: ['orders', { search: debounced, status }],
@@ -52,6 +58,9 @@ export default function OrdersPage() {
         pageSize: 50,
       }),
   });
+
+  const counts = countsQuery.data ?? {};
+  const totalAll = Object.values(counts).reduce((s, n) => s + n, 0);
 
   return (
     <div className="space-y-6">
@@ -67,32 +76,53 @@ export default function OrdersPage() {
         }
       />
 
-      <Card className="p-4">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Tìm mã đơn, tên khách, SĐT…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="sm:w-48">
-              <SelectValue placeholder="Trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Tất cả trạng thái</SelectItem>
-              {(Object.keys(ORDER_STATUS_LABEL) as OrderStatus[]).map((s) => (
-                <SelectItem key={s} value={s}>
-                  {ORDER_STATUS_LABEL[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <Card className="p-4 space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Tìm mã đơn, tên khách, SĐT…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
+        {/* Status chips */}
+        <div className="flex flex-wrap gap-2">
+          {STATUS_FILTERS.map((f) => {
+            const count = f.value === ALL ? totalAll : (counts[f.value] ?? 0);
+            const isActive = status === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setStatus(f.value)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                )}
+              >
+                {f.label}
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 py-0.5 text-xs font-bold leading-none',
+                      isActive
+                        ? 'bg-white/25 text-white'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Table */}
         {query.isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
