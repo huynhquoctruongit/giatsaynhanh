@@ -87,8 +87,8 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: Props) {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Số điện thoại *</Label>
-            <Input id="phone" {...register('phone')} />
+            <Label htmlFor="phone">Số điện thoại</Label>
+            <Input id="phone" {...register('phone')} placeholder="Không bắt buộc" />
             {errors.phone && (
               <p className="text-xs text-destructive">{errors.phone.message}</p>
             )}

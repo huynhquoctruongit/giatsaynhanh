@@ -9,7 +9,7 @@ export interface CustomerListQuery {
 
 export interface CustomerPayload {
   name: string;
-  phone: string;
+  phone?: string;
   address?: string;
   note?: string;
 }
