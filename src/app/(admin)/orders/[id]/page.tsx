@@ -52,6 +52,7 @@ interface OrderData {
   items: { name: string; quantity: number; weight?: number | null; unitPrice: number }[];
   totalAmount: number;
   discountAmount?: number;
+  note?: string | null;
   qr?: { url: string } | null;
 }
 
@@ -170,19 +171,21 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
 
   <hr class="divider"/>
 
-  <div style="padding: 4px 10px 6px;">
-    <p style="font-size:${sm}px;color:#888">Khách:</p>
-    <p style="font-size:${customerFs}px;font-weight:900;text-align:center;line-height:1.2;word-break:break-word">${order.customer?.name ?? '—'}</p>
-    ${order.customer?.phone ? `<p style="font-size:${sm}px;color:#666;text-align:center">${order.customer.phone}</p>` : ''}
+  <div style="padding: 4px 10px 6px; text-align:center;">
+    <p style="font-size:${sm}px;color:#888;letter-spacing:1px">KHÁCH HÀNG</p>
+    <p style="font-size:${customerFs}px;font-weight:900;line-height:1.2;word-break:break-word">${order.customer?.name ?? '—'}</p>
+    ${order.customer?.phone ? `<p style="font-size:${sm}px;color:#444">SĐT: ${order.customer.phone}</p>` : ''}
+    ${order.customer?.address ? `<p style="font-size:${sm}px;color:#444">ĐC: ${order.customer.address}</p>` : ''}
+    ${order.note ? `<p style="font-size:${sm}px;color:#444">Ghi chú: ${order.note}</p>` : ''}
   </div>
 
   <div style="padding: 0 8px 6px;">
     <table>
       <thead>
         <tr>
-          <th style="text-align:left">Sản phẩm</th>
+          <th style="text-align:left">Dịch vụ</th>
           <th style="text-align:center;white-space:nowrap">SL</th>
-          <th style="text-align:right;white-space:nowrap">T.Tiền</th>
+          <th style="text-align:right;white-space:nowrap">Thành tiền</th>
         </tr>
       </thead>
       <tbody>${itemsHtml}</tbody>
@@ -205,15 +208,18 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   </div>
 
   ${settings.invoiceShowQR && qrDataUrl ? `
-  <div style="text-align:center;padding:6px 0">
-    <img src="${qrDataUrl}" style="width:70px;height:70px"/>
-    <p style="font-size:${sm}px;color:#aaa">Quét để xem đơn hàng</p>
+  <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
+    <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
+    <p style="font-size:${sm}px;margin-top:2px">Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+    <div style="display:flex;justify-content:center;margin-top:8px">
+      <img src="${qrDataUrl}" style="width:150px;height:150px"/>
+    </div>
   </div>` : ''}
 
   <hr class="divider"/>
-  <div style="text-align:center;padding:4px 10px 10px;font-size:${sm}px;color:#888">
-    ${settings.openingHours ? `<p>Thời gian mở cửa: ${settings.openingHours}</p>` : ''}
-    <p style="margin-top:2px">Cảm ơn quý khách!</p>
+  <div style="text-align:center;padding:4px 10px 10px;font-size:${sm}px;color:#555">
+    ${settings.openingHours ? `<p>Giờ mở cửa: ${settings.openingHours}</p>` : ''}
+    <p style="margin-top:2px;font-weight:700">Cảm ơn quý khách! Hẹn gặp lại.</p>
   </div>
 </body>
 </html>`;
@@ -328,13 +334,19 @@ function InvoicePreviewPanel({
           <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
           {/* Customer */}
-          <div style={{ padding: '4px 10px 6px' }}>
-            <p style={{ fontSize: sm, color: '#888' }}>Khách:</p>
-            <p style={{ fontSize: customerFs, fontWeight: 900, textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-word' }}>
+          <div style={{ padding: '4px 10px 6px', textAlign: 'center' }}>
+            <p style={{ fontSize: sm, color: '#888', letterSpacing: 1 }}>KHÁCH HÀNG</p>
+            <p style={{ fontSize: customerFs, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
               {order.customer?.name ?? '—'}
             </p>
             {order.customer?.phone && (
-              <p style={{ fontSize: sm, color: '#666', textAlign: 'center' }}>{order.customer.phone}</p>
+              <p style={{ fontSize: sm, color: '#444' }}>SĐT: {order.customer.phone}</p>
+            )}
+            {order.customer?.address && (
+              <p style={{ fontSize: sm, color: '#444' }}>ĐC: {order.customer.address}</p>
+            )}
+            {order.note && (
+              <p style={{ fontSize: sm, color: '#444' }}>Ghi chú: {order.note}</p>
             )}
           </div>
 
@@ -343,9 +355,9 @@ function InvoicePreviewPanel({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: sm }}>
               <thead>
                 <tr style={{ background: '#f5f5f5' }}>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left' }}>Sản phẩm</th>
+                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left' }}>Dịch vụ</th>
                   <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>T.Tiền</th>
+                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,20 +408,23 @@ function InvoicePreviewPanel({
             </div>
           </div>
 
-          {/* QR */}
+          {/* QR — CTA nổi bật giống bản in */}
           {settings.invoiceShowQR && qrDataUrl && (
-            <div style={{ textAlign: 'center', padding: '6px 0' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrDataUrl} alt="QR" style={{ width: 70, height: 70 }} />
-              <p style={{ fontSize: sm, color: '#aaa' }}>Quét để xem đơn hàng</p>
+            <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
+              <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
+              <p style={{ fontSize: sm, marginTop: 2 }}>Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
+              </div>
             </div>
           )}
 
           {/* Footer */}
           <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
-          <div style={{ textAlign: 'center', padding: '4px 10px 10px', fontSize: sm, color: '#888' }}>
-            {settings.openingHours && <p>Thời gian mở cửa: {settings.openingHours}</p>}
-            <p style={{ marginTop: 2 }}>Cảm ơn quý khách!</p>
+          <div style={{ textAlign: 'center', padding: '4px 10px 10px', fontSize: sm, color: '#555' }}>
+            {settings.openingHours && <p>Giờ mở cửa: {settings.openingHours}</p>}
+            <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
           </div>
     </div>
   );
