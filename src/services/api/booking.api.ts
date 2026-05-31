@@ -64,6 +64,12 @@ export const bookingApi = {
 
   remove: (id: string) => apiClient.delete(`/bookings/${id}`),
 
+  // QR "đặt đơn tại cửa": nhận diện khách theo SĐT → trả token để vào flow /q/{token}
+  identify: (payload: { phone: string; name?: string; address?: string }) =>
+    unwrap<{ token: string; name: string }>(
+      apiClient.post('/qr/identify', payload),
+    ),
+
   prefillFromQr: (token: string) =>
     unwrap<BookingPrefill>(apiClient.get(`/qr/${token}/booking-context`)),
 

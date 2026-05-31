@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Printer, Copy } from 'lucide-react';
+import QRCode from 'react-qr-code';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -217,6 +218,63 @@ function LabelPreview({ template, fontSize, shopName }: { template: string; font
   );
 }
 
+// ─── QR "đặt đơn tại cửa" ───────────────────────────────────────────────────
+function DoorQrCard({ shopName }: { shopName: string }) {
+  const [url, setUrl] = useState('');
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setUrl(`${window.location.origin}/dat-don`);
+  }, []);
+
+  function printQr() {
+    const svg = qrRef.current?.innerHTML ?? '';
+    const w = window.open('', '_blank', 'width=420,height=600');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"/>
+      <title>QR đặt đơn</title></head>
+      <body style="text-align:center;font-family:sans-serif;padding:28px;margin:0" onload="window.print()">
+        <h2 style="margin:0 0 2px;font-size:22px">${shopName || 'GIẶT SẤY'}</h2>
+        <p style="margin:0 0 18px;font-weight:800;font-size:18px;letter-spacing:.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
+        <div style="display:flex;justify-content:center">${svg}</div>
+        <p style="margin-top:18px;font-size:16px">Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+      </body></html>`);
+    w.document.close();
+  }
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>QR đặt đơn tại quầy / cửa</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          In mã này dán ở cửa tiệm. Khách quét → lần đầu nhập SĐT, các lần sau hệ
+          thống tự nhận (lưu trên máy khách) nên đặt đơn cực nhanh.
+        </p>
+        <div className="flex flex-col items-center gap-3">
+          <div ref={qrRef} className="rounded-lg border bg-white p-4">
+            {url ? <QRCode value={url} size={180} /> : null}
+          </div>
+          <code className="break-all text-center text-xs text-muted-foreground">{url}</code>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard?.writeText(url);
+                toast.success('Đã copy link');
+              }}
+            >
+              <Copy className="h-4 w-4" /> Copy link
+            </Button>
+            <Button onClick={printQr}>
+              <Printer className="h-4 w-4" /> In mã QR
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -343,6 +401,7 @@ export default function SettingsPage() {
 
       {/* ── Shop Info ── */}
       {tab === 'shop' && (
+        <div className="space-y-6">
         <Card>
           <CardHeader><CardTitle>Thông tin cửa hàng</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -379,6 +438,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <DoorQrCard shopName={shopName} />
+        </div>
       )}
 
       {/* ── Invoice & Label ── */}
