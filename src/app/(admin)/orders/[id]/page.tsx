@@ -477,7 +477,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   }
 
   const order = orderQuery.data;
-  const nextStatuses = NEXT_STATUS_TRANSITIONS[order.status];
+  // Admin: đổi sang BẤT KỲ trạng thái nào (trừ trạng thái hiện tại).
+  // Nhân viên: theo luồng cho phép.
+  const allStatuses = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[];
+  const statusOptions: OrderStatus[] = isAdmin
+    ? allStatuses.filter((s) => s !== order.status)
+    : NEXT_STATUS_TRANSITIONS[order.status];
   const settings = settingsQuery.data;
 
   function handlePrint() {
@@ -706,12 +711,19 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Status update card */}
           <Card>
-            <CardHeader><CardTitle>Cập nhật trạng thái</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Cập nhật trạng thái</CardTitle>
+              {isAdmin && (
+                <p className="text-xs text-muted-foreground">
+                  Quản trị viên có thể đặt sang bất kỳ trạng thái nào.
+                </p>
+              )}
+            </CardHeader>
             <CardContent className="space-y-2">
-              {nextStatuses.length === 0 ? (
+              {statusOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Đơn đã ở trạng thái cuối.</p>
               ) : (
-                nextStatuses.map((s) => (
+                statusOptions.map((s) => (
                   <Button
                     key={s}
                     variant={s === 'CANCELLED' ? 'outline' : 'default'}
