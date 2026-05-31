@@ -6,6 +6,7 @@ import { useState } from 'react';
 import {
   LayoutDashboard,
   Package,
+  PackageSearch,
   Users,
   ShoppingBag,
   ScanLine,
@@ -36,6 +37,7 @@ import {
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/orders', label: 'Đơn hàng', icon: Package },
+  { href: '/audit', label: 'Rà soát đơn', icon: PackageSearch },
   { href: '/bookings', label: 'Đặt lịch', icon: CalendarClock },
   { href: '/customers', label: 'Khách hàng', icon: Users },
   { href: '/suppliers', label: 'Nhà cung cấp', icon: Truck },

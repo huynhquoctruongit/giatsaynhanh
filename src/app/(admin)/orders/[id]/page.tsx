@@ -2,10 +2,12 @@
 
 import { use, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, Download, History, Printer, QrCode } from 'lucide-react';
+import { ArrowLeft, Copy, Download, History, Pencil, Printer, QrCode, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -417,6 +419,9 @@ function InvoicePreviewPanel({
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const qrRef = useRef<HTMLDivElement>(null);
 
   const orderQuery = useQuery({ queryKey: ['order', id], queryFn: () => orderApi.detail(id) });
@@ -433,6 +438,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     },
     onError: (err) => toast.error(extractError(err).message),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => orderApi.remove(id),
+    onSuccess: () => {
+      toast.success('Đã xoá đơn');
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      router.push('/orders');
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  function handleDelete() {
+    if (window.confirm(`Xoá đơn ${orderQuery.data?.code ?? ''}?\nHành động này không thể hoàn tác.`)) {
+      deleteMutation.mutate();
+    }
+  }
 
   if (orderQuery.isLoading) {
     return (
@@ -471,9 +492,28 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         title={order.code}
         description={`Tạo lúc ${formatDateTime(order.createdAt)}`}
         actions={
-          <Button variant="ghost" asChild>
-            <Link href="/orders"><ArrowLeft className="h-4 w-4" /> Tất cả đơn</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <>
+                <Button variant="outline" asChild>
+                  <Link href={`/orders/new?edit=${id}`}>
+                    <Pencil className="h-4 w-4" /> Sửa
+                  </Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" /> Xoá
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" asChild>
+              <Link href="/orders"><ArrowLeft className="h-4 w-4" /> Tất cả đơn</Link>
+            </Button>
+          </div>
         }
       />
 

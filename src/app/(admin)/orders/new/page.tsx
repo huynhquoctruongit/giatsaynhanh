@@ -1,6 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useFieldArray, useForm } from 'react-hook-form';
@@ -30,8 +31,11 @@ import {
   type OrderFormInput,
 } from '@/helpers/validators/order.schema';
 
-export default function NewOrderPage() {
+function NewOrderForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit') ?? undefined;
+  const isEditMode = !!editId;
 
   const customersQuery = useQuery({
     queryKey: ['customers', 'all'],
@@ -41,6 +45,13 @@ export default function NewOrderPage() {
   const productsQuery = useQuery({
     queryKey: ['products', 'active'],
     queryFn: () => productApi.list({ isActive: true, pageSize: 100 }),
+  });
+
+  // Load đơn hiện có khi đang edit
+  const editQuery = useQuery({
+    queryKey: ['order', editId],
+    queryFn: () => orderApi.detail(editId!),
+    enabled: isEditMode,
   });
 
   const form = useForm<OrderFormInput>({
@@ -61,22 +72,45 @@ export default function NewOrderPage() {
     0,
   );
 
+  // Đổ dữ liệu đơn vào form khi edit
+  useEffect(() => {
+    const o = editQuery.data;
+    if (!o) return;
+    form.reset({
+      customerId: o.customer?.id ?? '',
+      note: o.note ?? '',
+      pickupAt: o.pickupAt ? o.pickupAt.slice(0, 16) : '',
+      items: o.items.map((it) => ({
+        productId: it.productId ?? undefined,
+        name: it.name,
+        quantity: Number(it.quantity),
+        weight: it.weight ? Number(it.weight) : undefined,
+        unitPrice: Number(it.unitPrice),
+      })),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editQuery.data]);
+
+  const toPayload = (values: OrderFormInput) => ({
+    customerId: values.customerId,
+    note: values.note || undefined,
+    pickupAt: values.pickupAt || undefined,
+    items: values.items.map((i) => ({
+      productId: i.productId || undefined,
+      name: i.name,
+      quantity: Number(i.quantity),
+      weight: i.weight ? Number(i.weight) : undefined,
+      unitPrice: Number(i.unitPrice),
+    })),
+  });
+
   const mutation = useMutation({
     mutationFn: (values: OrderFormInput) =>
-      orderApi.create({
-        customerId: values.customerId,
-        note: values.note || undefined,
-        pickupAt: values.pickupAt || undefined,
-        items: values.items.map((i) => ({
-          productId: i.productId || undefined,
-          name: i.name,
-          quantity: Number(i.quantity),
-          weight: i.weight ? Number(i.weight) : undefined,
-          unitPrice: Number(i.unitPrice),
-        })),
-      }),
+      isEditMode
+        ? orderApi.update(editId!, toPayload(values))
+        : orderApi.create(toPayload(values)),
     onSuccess: (order) => {
-      toast.success(`Tạo đơn ${order.code} thành công`);
+      toast.success(isEditMode ? 'Đã cập nhật đơn' : `Tạo đơn ${order.code} thành công`);
       router.push(`/orders/${order.id}`);
     },
     onError: (err) => toast.error(extractError(err).message),
@@ -103,8 +137,8 @@ export default function NewOrderPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Tạo đơn giặt sấy"
-        description="Chọn khách, thêm sản phẩm và in QR"
+        title={isEditMode ? 'Sửa đơn' : 'Tạo đơn giặt sấy'}
+        description={isEditMode ? 'Cập nhật thông tin & sản phẩm của đơn' : 'Chọn khách, thêm sản phẩm và in QR'}
         actions={
           <Button variant="ghost" asChild>
             <Link href="/orders">
@@ -270,10 +304,22 @@ export default function NewOrderPage() {
             <p className="text-2xl font-bold">{formatCurrency(total)}</p>
           </div>
           <Button type="submit" size="lg" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Đang tạo…' : 'Tạo đơn & in QR'}
+            {mutation.isPending
+              ? 'Đang lưu…'
+              : isEditMode
+                ? 'Lưu thay đổi'
+                : 'Tạo đơn & in QR'}
           </Button>
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewOrderPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewOrderForm />
+    </Suspense>
   );
 }

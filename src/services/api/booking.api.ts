@@ -38,6 +38,14 @@ export interface ConvertBookingPayload {
   discountAmount?: number;
 }
 
+export interface UpdateBookingPayload {
+  note?: string | null;
+  phone?: string;
+  address?: string;
+  pickupAt?: string | null;
+  deliveryAt?: string | null;
+}
+
 export const bookingApi = {
   list: (query: BookingListQuery = {}) =>
     unwrap<PaginatedResult<Booking>>(
@@ -50,6 +58,11 @@ export const bookingApi = {
     ),
   convert: (id: string, payload: ConvertBookingPayload = {}) =>
     unwrap<Booking>(apiClient.post(`/bookings/${id}/convert`, payload)),
+
+  update: (id: string, payload: UpdateBookingPayload) =>
+    unwrap<Booking>(apiClient.patch(`/bookings/${id}`, payload)),
+
+  remove: (id: string) => apiClient.delete(`/bookings/${id}`),
 
   prefillFromQr: (token: string) =>
     unwrap<BookingPrefill>(apiClient.get(`/qr/${token}/booking-context`)),

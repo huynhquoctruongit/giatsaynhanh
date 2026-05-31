@@ -1,6 +1,6 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,18 +11,31 @@ import {
   CheckCircle2,
   MapPin,
   PackageOpen,
+  Pencil,
   PhoneCall,
   Repeat,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/common/page-header';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { bookingApi } from '@/services/api/booking.api';
 import { extractError } from '@/services/api/client';
+import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { BookingStatus } from '@/helpers/enums/booking-status';
 
@@ -34,6 +47,13 @@ export default function BookingDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editPhone, setEditPhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editNote, setEditNote] = useState('');
 
   const query = useQuery({
     queryKey: ['booking', id],
@@ -64,6 +84,47 @@ export default function BookingDetailPage({
     },
     onError: (err) => toast.error(extractError(err).message),
   });
+
+  const updateBooking = useMutation({
+    mutationFn: () =>
+      bookingApi.update(id, {
+        phone: editPhone,
+        address: editAddress,
+        note: editNote || null,
+      }),
+    onSuccess: () => {
+      toast.success('Đã cập nhật đặt lịch');
+      qc.invalidateQueries({ queryKey: ['booking', id] });
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+      setEditOpen(false);
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  const deleteBooking = useMutation({
+    mutationFn: () => bookingApi.remove(id),
+    onSuccess: () => {
+      toast.success('Đã xoá đặt lịch');
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+      router.push('/bookings');
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  function openEdit() {
+    const b = query.data;
+    if (!b) return;
+    setEditPhone(b.phone ?? '');
+    setEditAddress(b.address ?? '');
+    setEditNote(b.note ?? '');
+    setEditOpen(true);
+  }
+
+  function handleDelete() {
+    if (window.confirm(`Xoá đặt lịch ${query.data?.code ?? ''}?\nHành động này không thể hoàn tác.`)) {
+      deleteBooking.mutate();
+    }
+  }
 
   if (query.isLoading) {
     return (
@@ -108,13 +169,59 @@ export default function BookingDetailPage({
         title={booking.code}
         description={`Gửi lúc ${formatDateTime(booking.createdAt)}`}
         actions={
-          <Button variant="ghost" asChild>
-            <Link href="/bookings">
-              <ArrowLeft className="h-4 w-4" /> Tất cả đặt lịch
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <>
+                <Button variant="outline" onClick={openEdit}>
+                  <Pencil className="h-4 w-4" /> Sửa
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={handleDelete}
+                  disabled={deleteBooking.isPending}
+                >
+                  <Trash2 className="h-4 w-4" /> Xoá
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" asChild>
+              <Link href="/bookings">
+                <ArrowLeft className="h-4 w-4" /> Tất cả đặt lịch
+              </Link>
+            </Button>
+          </div>
         }
       />
+
+      {/* Dialog sửa đặt lịch */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa đặt lịch</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Số điện thoại</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Địa chỉ</Label>
+              <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Ghi chú</Label>
+              <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Huỷ</Button>
+            <Button onClick={() => updateBooking.mutate()} disabled={updateBooking.isPending}>
+              {updateBooking.isPending ? 'Đang lưu…' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
