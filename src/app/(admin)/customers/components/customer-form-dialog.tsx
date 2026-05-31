@@ -61,6 +61,10 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: Props) {
     onSuccess: () => {
       toast.success(isEdit ? 'Đã cập nhật khách hàng' : 'Đã thêm khách hàng');
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      // Đơn & QR hiển thị thông tin khách theo thời gian thực → refresh luôn
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order'] });
+      queryClient.invalidateQueries({ queryKey: ['booking'] });
       onOpenChange(false);
     },
     onError: (err) => toast.error(extractError(err).message),
