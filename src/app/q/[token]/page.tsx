@@ -357,7 +357,7 @@ function DeliverySlotPicker({
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5 text-sm font-semibold">
         <Clock className="h-3.5 w-3.5" />
-        Bạn muốn tôi giao đồ lúc nào?
+        Bạn muốn tôi lấy đồ lúc nào?
       </Label>
       <div className="grid grid-cols-2 gap-2">
         {slots.map((s) => {
@@ -401,8 +401,35 @@ function DeliverySlotPicker({
           );
         })}
       </div>
+      {/* Dự kiến giao trả đồ = giờ lấy + 1 ngày */}
+      <div className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+        <Package className="h-4 w-4" />
+        Dự kiến giao trả đồ: {formatReturnEstimate(value)}
+      </div>
     </div>
   );
+}
+
+/** Giờ giao trả = giờ lấy + 1 ngày (ISO) */
+function addOneDayIso(iso: string): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString();
+}
+
+/** Giờ giao trả dự kiến = giờ lấy đồ + 1 ngày, dạng "20:00 ngày mai" */
+function formatReturnEstimate(pickupIso: string): string {
+  const d = new Date(pickupIso);
+  d.setDate(d.getDate() + 1);
+  const hh = `${d.getHours()}`.padStart(2, '0');
+  const mm = `${d.getMinutes()}`.padStart(2, '0');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+  const dayLabel = isTomorrow
+    ? 'ngày mai'
+    : `${`${d.getDate()}`.padStart(2, '0')}/${`${d.getMonth() + 1}`.padStart(2, '0')}`;
+  return `${hh}:${mm} ${dayLabel}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -460,7 +487,7 @@ function SimpleRebookView({
                 Đặt lại y như đơn cũ
               </p>
               <p className="mt-1 text-xs opacity-90">
-                Giao đến địa chỉ cũ · {formatSlotText(findSlot(slots, deliveryAt))}
+                Lấy đồ {formatSlotText(findSlot(slots, deliveryAt))} · giao trả {formatReturnEstimate(deliveryAt)}
               </p>
             </div>
             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-lg">
@@ -514,7 +541,8 @@ function RebookConfirmDialog({
       bookingApi.createFromQr(token, {
         phone: prefill.customer.phone.trim(),
         address: (prefill.customer.address ?? '').trim(),
-        deliveryAt,
+        pickupAt: deliveryAt, // slot khách chọn = giờ LẤY đồ
+        deliveryAt: addOneDayIso(deliveryAt), // giờ giao trả dự kiến = lấy + 1 ngày
         items: prefill.items.map((i) => ({
           productId: i.productId ?? undefined,
           name: i.name,
@@ -557,10 +585,14 @@ function RebookConfirmDialog({
               text={joinItems(prefill.items) || '—'}
             />
           </div>
-          <div className="border-t pt-3">
+          <div className="border-t pt-3 space-y-2">
             <InfoLine
               icon={<Clock className="h-4 w-4" />}
               text={`Lấy đồ: ${formatSlotText(slot)}`}
+            />
+            <InfoLine
+              icon={<Package className="h-4 w-4" />}
+              text={`Dự kiến giao trả: ${formatReturnEstimate(deliveryAt)}`}
             />
           </div>
         </div>
@@ -664,7 +696,8 @@ function CustomBookingForm({
       bookingApi.createFromQr(token, {
         phone: phone.trim(),
         address: address.trim(),
-        deliveryAt,
+        pickupAt: deliveryAt, // slot khách chọn = giờ LẤY đồ
+        deliveryAt: addOneDayIso(deliveryAt), // giờ giao trả dự kiến = lấy + 1 ngày
         note: note.trim() || undefined,
         items: selectedItems,
       }),
