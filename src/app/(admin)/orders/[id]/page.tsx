@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ArrowLeft, Copy, Download, History, Pencil, Printer, QrCode, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Download, History, Pencil, Printer, QrCode, Trash2, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,6 +75,16 @@ function deliveryBookingTagHtml(
     ${bookingLine}
     ${pickupLine}
   </div>`;
+}
+
+/** Dòng quảng cáo freeship theo ngưỡng cấu hình */
+function freeShipLine(threshold?: number | null): string {
+  const t = Number(threshold ?? 0);
+  if (t > 0) {
+    const k = t % 1000 === 0 ? `${t / 1000}k` : `${t.toLocaleString('vi-VN')}đ`;
+    return `MIỄN PHÍ giao nhận cho đơn hàng trên ${k}`;
+  }
+  return 'Miễn phí giao nhận tận nơi';
 }
 
 function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: string): string {
@@ -210,7 +220,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   ${settings.invoiceShowQR && qrDataUrl ? `
   <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
     <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
-    <p style="font-size:${sm}px;margin-top:2px">Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+    <p style="font-size:${sm}px;margin-top:2px">${freeShipLine(settings.freeShipThreshold)}</p>
     <div style="display:flex;justify-content:center;margin-top:8px">
       <img src="${qrDataUrl}" style="width:150px;height:150px"/>
     </div>
@@ -412,7 +422,7 @@ function InvoicePreviewPanel({
           {settings.invoiceShowQR && qrDataUrl && (
             <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
               <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
-              <p style={{ fontSize: sm, marginTop: 2 }}>Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+              <p style={{ fontSize: sm, marginTop: 2 }}>{freeShipLine(settings.freeShipThreshold)}</p>
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
@@ -540,11 +550,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Left: order info ── */}
         <div className="space-y-6 lg:col-span-2">
-          <Card>
+          <Card className="relative overflow-hidden">
+            {/* Dấu "giao tận nhà" cho đơn đặt lịch — mép trái, giữa (kiểu giáp lai) */}
+            {order.fromBooking && (
+              <div className="pointer-events-none absolute left-0 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+                <div className="flex -rotate-90 items-center gap-1.5 rounded-md border-2 border-sky-500 bg-sky-50 px-3 py-1 text-sky-600 shadow-sm">
+                  <Truck className="h-4 w-4" />
+                  <span className="text-xs font-extrabold tracking-wide">GIAO TẬN NHÀ</span>
+                </div>
+              </div>
+            )}
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
                 <CardTitle>Thông tin đơn</CardTitle>
                 <OrderStatusBadge status={order.status} />
+                {order.fromBooking && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                    <Truck className="h-3 w-3" /> Đặt lịch
+                  </span>
+                )}
               </div>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">

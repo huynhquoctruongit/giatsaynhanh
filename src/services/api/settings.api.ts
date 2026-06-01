@@ -27,6 +27,7 @@ export interface ShopSettings {
   deliveryEnabled: boolean;
   deliveryFee: number | null;
   bookingShippingFee: number | null;
+  freeShipThreshold: number | null;
   allowNoShiftOrder: boolean;
 }
 

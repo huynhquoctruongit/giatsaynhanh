@@ -60,6 +60,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
       wholesaleEnabled: false,
       wholesaleTiers: DEFAULT_TIERS,
       isActive: true,
+      hiddenFromBooking: false,
       note: '',
     },
   });
@@ -82,6 +83,7 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
           ? product.wholesaleTiers
           : DEFAULT_TIERS,
       isActive: product?.isActive ?? true,
+      hiddenFromBooking: product?.hiddenFromBooking ?? false,
       note: product?.note ?? '',
     });
   }, [product, open, reset]);
@@ -206,6 +208,25 @@ export function ProductFormDialog({ open, onOpenChange, product }: Props) {
               </p>
             </div>
           )}
+
+          {/* Ẩn khỏi web đặt lịch */}
+          <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-3">
+            <Checkbox
+              id="hiddenFromBooking"
+              checked={watch('hiddenFromBooking') ?? false}
+              onCheckedChange={(checked) =>
+                setValue('hiddenFromBooking', checked === true)
+              }
+            />
+            <div>
+              <Label htmlFor="hiddenFromBooking" className="cursor-pointer font-medium">
+                Ẩn khỏi web đặt lịch của khách
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Dịch vụ nội bộ (Phụ thu, Phí xử lý…) sẽ không hiện cho khách khi đặt qua QR.
+              </p>
+            </div>
+          </div>
 
           {/* Ghi chú */}
           <div className="space-y-2">

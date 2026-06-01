@@ -53,6 +53,7 @@ export interface Product {
   wholesaleEnabled?: boolean;
   wholesaleTiers?: WholesaleTier[] | null;
   isActive: boolean;
+  hiddenFromBooking?: boolean;
   note: string | null;
   createdAt: string;
   updatedAt: string;

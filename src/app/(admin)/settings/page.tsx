@@ -219,7 +219,15 @@ function LabelPreview({ template, fontSize, shopName }: { template: string; font
 }
 
 // ─── QR "đặt đơn tại cửa" ───────────────────────────────────────────────────
-function DoorQrCard({ shopName }: { shopName: string }) {
+function freeShipLineText(threshold: number): string {
+  if (threshold > 0) {
+    const k = threshold % 1000 === 0 ? `${threshold / 1000}k` : `${threshold.toLocaleString('vi-VN')}đ`;
+    return `MIỄN PHÍ giao nhận cho đơn hàng trên ${k}`;
+  }
+  return 'Miễn phí giao nhận tận nơi';
+}
+
+function DoorQrCard({ shopName, freeShipThreshold }: { shopName: string; freeShipThreshold: number }) {
   const [url, setUrl] = useState('');
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -237,7 +245,7 @@ function DoorQrCard({ shopName }: { shopName: string }) {
         <h2 style="margin:0 0 2px;font-size:22px">${shopName || 'GIẶT SẤY'}</h2>
         <p style="margin:0 0 18px;font-weight:800;font-size:18px;letter-spacing:.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
         <div style="display:flex;justify-content:center">${svg}</div>
-        <p style="margin-top:18px;font-size:16px">Quét mã QR để đặt đơn — miễn phí tới tận nơi</p>
+        <p style="margin-top:18px;font-size:16px">${freeShipLineText(freeShipThreshold)}</p>
       </body></html>`);
     w.document.close();
   }
@@ -307,6 +315,8 @@ export default function SettingsPage() {
   const [loyaltyPointsRate, setLoyaltyPointsRate] = useState('');
   const [deliveryEnabled, setDeliveryEnabled] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState('');
+  const [bookingShippingFee, setBookingShippingFee] = useState('');
+  const [freeShipThreshold, setFreeShipThreshold] = useState('');
   const [allowNoShiftOrder, setAllowNoShiftOrder] = useState(true);
 
   useEffect(() => {
@@ -335,6 +345,8 @@ export default function SettingsPage() {
     setLoyaltyPointsRate(d.loyaltyPointsRate?.toString() ?? '');
     setDeliveryEnabled(d.deliveryEnabled ?? false);
     setDeliveryFee(d.deliveryFee?.toString() ?? '');
+    setBookingShippingFee(d.bookingShippingFee?.toString() ?? '');
+    setFreeShipThreshold(d.freeShipThreshold?.toString() ?? '');
     setAllowNoShiftOrder(d.allowNoShiftOrder ?? true);
   }, [data]);
 
@@ -367,8 +379,10 @@ export default function SettingsPage() {
     updateMutation.mutate({
       loyaltyEnabled, loyaltyPointsRate: loyaltyPointsRate ? Number(loyaltyPointsRate) : null,
       deliveryEnabled, deliveryFee: deliveryFee ? Number(deliveryFee) : null,
+      bookingShippingFee: bookingShippingFee ? Number(bookingShippingFee) : null,
+      freeShipThreshold: freeShipThreshold ? Number(freeShipThreshold) : null,
       allowNoShiftOrder,
-    });
+    } as any);
   }
 
   const tabs: { key: Tab; label: string }[] = [
@@ -439,7 +453,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <DoorQrCard shopName={shopName} />
+        <DoorQrCard shopName={shopName} freeShipThreshold={freeShipThreshold ? Number(freeShipThreshold) : 0} />
         </div>
       )}
 
@@ -563,7 +577,7 @@ export default function SettingsPage() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Dịch vụ giao nhận</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Dịch vụ giao nhận (đặt lịch qua QR)</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <Toggle checked={deliveryEnabled} onChange={setDeliveryEnabled} label="Bật dịch vụ giao nhận" />
               {deliveryEnabled && (
@@ -572,6 +586,18 @@ export default function SettingsPage() {
                   <Input type="number" value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} placeholder="20000" min={0} />
                 </div>
               )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Phí ship đơn đặt lịch (VND)</Label>
+                  <Input type="number" value={bookingShippingFee} onChange={(e) => setBookingShippingFee(e.target.value)} placeholder="20000" min={0} />
+                  <p className="text-xs text-muted-foreground">Cộng vào hoá đơn đơn đặt lịch khi dưới ngưỡng freeship.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Miễn phí ship khi tổng đơn ≥ (VND)</Label>
+                  <Input type="number" value={freeShipThreshold} onChange={(e) => setFreeShipThreshold(e.target.value)} placeholder="80000" min={0} />
+                  <p className="text-xs text-muted-foreground">Để trống = luôn tính phí ship cho đơn đặt lịch.</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

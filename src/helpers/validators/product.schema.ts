@@ -12,6 +12,7 @@ export const productSchema = z.object({
   wholesaleEnabled: z.boolean().optional().default(false),
   wholesaleTiers: z.array(wholesaleTierSchema).optional().nullable(),
   isActive: z.boolean().optional().default(true),
+  hiddenFromBooking: z.boolean().optional().default(false),
   note: z.string().optional(),
 });
 
