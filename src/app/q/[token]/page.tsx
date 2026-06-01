@@ -96,21 +96,17 @@ function computeDeliverySlots(now: Date = new Date()): TimeSlot[] {
   morning.setDate(morning.getDate() + 1);
   morning.setHours(7, 0, 0, 0);
 
+  // Đã qua 20:00 hôm nay → khung "8h tối hôm nay" bị DISABLE (không cho chọn)
   const tonightPassed = tonight.getTime() <= now.getTime();
-
-  // Nếu tối nay đã qua → dời sang tối mai
-  const shiftedTonight = tonightPassed
-    ? new Date(tonight.getFullYear(), tonight.getMonth(), tonight.getDate() + 1, 20, 0, 0)
-    : tonight;
 
   return [
     {
       id: 'tonight',
-      iso: shiftedTonight.toISOString(),
+      iso: tonight.toISOString(),
       label: '8h tối',
-      sub: tonightPassed ? 'Ngày mai' : 'Hôm nay',
+      sub: tonightPassed ? 'Đã qua giờ' : 'Hôm nay',
       icon: <Moon className="h-4 w-4" />,
-      disabled: false,
+      disabled: tonightPassed,
     },
     {
       id: 'morning',
@@ -217,7 +213,9 @@ function PublicBookingFlow({
   const canQuickRebook = hasPhone && hasAddress && sourceItems.length > 0;
 
   const slots = useMemo(() => computeDeliverySlots(), []);
-  const [deliveryAt, setDeliveryAt] = useState<string>(slots[1].iso); // mặc định: 7h sáng mai
+  // Mặc định chọn khung GẦN NHẤT còn hợp lệ (chưa qua giờ)
+  const defaultSlot = slots.find((s) => !s.disabled) ?? slots[slots.length - 1];
+  const [deliveryAt, setDeliveryAt] = useState<string>(defaultSlot.iso);
   const [view, setView] = useState<View>(canQuickRebook ? 'simple' : 'custom');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitted, setSubmitted] = useState<string | null>(null);
