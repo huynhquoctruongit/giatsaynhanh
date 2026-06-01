@@ -56,27 +56,6 @@ interface OrderData {
   qr?: { url: string } | null;
 }
 
-function deliveryBookingTagHtml(
-  order: Pick<OrderData, 'fromBooking' | 'pickupAt' | 'booking'>,
-  base: number,
-  sm: number,
-): string {
-  if (!order.fromBooking) return '';
-  const bookingLine = order.booking?.code
-    ? `<p style="font-size:${sm}px;color:#444;margin-top:2px">${order.booking.code}</p>`
-    : '';
-  const pickupLine = order.pickupAt
-    ? `<p style="font-size:${sm}px;margin-top:2px">Hẹn lấy: ${formatDateTime(order.pickupAt)}</p>`
-    : '';
-  return `
-  <div style="margin:6px 10px;padding:8px;border:2px solid #000;text-align:center">
-    <p style="font-weight:900;font-size:${base + 3}px;letter-spacing:1px">GIAO NHẬN</p>
-    <p style="font-size:${sm}px;margin-top:2px">Đơn đặt qua mã QR — shipper đi giao</p>
-    ${bookingLine}
-    ${pickupLine}
-  </div>`;
-}
-
 /** Dòng quảng cáo freeship theo ngưỡng cấu hình */
 function freeShipLine(threshold?: number | null): string {
   const t = Number(threshold ?? 0);
@@ -175,7 +154,6 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <div style="padding: 4px 10px; text-align: center;">
     <p style="font-weight:700">HÓA ĐƠN</p>
     <p style="font-size:${sm}px;color:#555">${order.code} · ${dateStr}</p>
-    ${deliveryBookingTagHtml(order, base, sm)}
     ${settings.invoiceShowBarcode ? barsHtml : ''}
   </div>
 
@@ -224,6 +202,11 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     <div style="display:flex;justify-content:center;margin-top:8px">
       <img src="${qrDataUrl}" style="width:150px;height:150px"/>
     </div>
+  </div>` : ''}
+
+  ${order.fromBooking ? `
+  <div style="text-align:center;margin:8px 10px 2px">
+    <span style="display:inline-block;border:2px solid #000;border-radius:8px;padding:4px 12px;font-weight:900;letter-spacing:0.5px;font-size:${base}px">🚚 ĐƠN GIAO TẬN NHÀ</span>
   </div>` : ''}
 
   <hr class="divider"/>
@@ -317,27 +300,6 @@ function InvoicePreviewPanel({
           <div style={{ padding: '4px 10px', textAlign: 'center' }}>
             <p style={{ fontWeight: 700 }}>HÓA ĐƠN</p>
             <p style={{ fontSize: sm, color: '#555' }}>{order.code} · {dateStr}</p>
-            {order.fromBooking && (
-              <div
-                style={{
-                  margin: '6px 10px',
-                  padding: 8,
-                  border: '2px solid #000',
-                  textAlign: 'center',
-                }}
-              >
-                <p style={{ fontWeight: 900, fontSize: base + 3, letterSpacing: 1 }}>GIAO NHẬN</p>
-                <p style={{ fontSize: sm, marginTop: 2 }}>Đơn đặt qua mã QR — shipper đi giao</p>
-                {order.booking?.code && (
-                  <p style={{ fontSize: sm, color: '#444', marginTop: 2, fontFamily: 'monospace' }}>
-                    {order.booking.code}
-                  </p>
-                )}
-                {order.pickupAt && (
-                  <p style={{ fontSize: sm, marginTop: 2 }}>Hẹn lấy: {formatDateTime(order.pickupAt)}</p>
-                )}
-              </div>
-            )}
             {settings.invoiceShowBarcode && <BarcodeGraphic code={order.code} />}
           </div>
 
@@ -427,6 +389,15 @@ function InvoicePreviewPanel({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
               </div>
+            </div>
+          )}
+
+          {/* Tag SHIP cho đơn đặt lịch — bottom, center */}
+          {order.fromBooking && (
+            <div style={{ textAlign: 'center', margin: '8px 10px 2px' }}>
+              <span style={{ display: 'inline-block', border: '2px solid #000', borderRadius: 8, padding: '4px 12px', fontWeight: 900, letterSpacing: 0.5, fontSize: base }}>
+                🚚 ĐƠN GIAO TẬN NHÀ
+              </span>
             </div>
           )}
 
