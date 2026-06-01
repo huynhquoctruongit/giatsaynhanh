@@ -90,20 +90,20 @@ interface TimeSlot {
 
 function computeDeliverySlots(now: Date = new Date()): TimeSlot[] {
   const tonight = new Date(now);
-  tonight.setHours(20, 0, 0, 0);
+  tonight.setHours(19, 0, 0, 0); // 7h tối nay
 
   const morning = new Date(now);
   morning.setDate(morning.getDate() + 1);
-  morning.setHours(7, 0, 0, 0);
+  morning.setHours(7, 0, 0, 0); // 7h sáng mai
 
-  // Đã qua 20:00 hôm nay → khung "8h tối hôm nay" bị DISABLE (không cho chọn)
+  // Đã qua 19:00 hôm nay → khung "7h tối nay" bị DISABLE (không cho chọn)
   const tonightPassed = tonight.getTime() <= now.getTime();
 
   return [
     {
       id: 'tonight',
       iso: tonight.toISOString(),
-      label: '8h tối',
+      label: '7h tối',
       sub: tonightPassed ? 'Đã qua giờ' : 'Hôm nay',
       icon: <Moon className="h-4 w-4" />,
       disabled: tonightPassed,
@@ -404,33 +404,22 @@ function DeliverySlotPicker({
       {/* Dự kiến giao trả đồ = giờ lấy + 1 ngày */}
       <div className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
         <Package className="h-4 w-4" />
-        Dự kiến giao trả đồ: {formatReturnEstimate(value)}
+        Dự kiến giao trả đồ: {RETURN_ESTIMATE_TEXT}
       </div>
     </div>
   );
 }
 
-/** Giờ giao trả = giờ lấy + 1 ngày (ISO) */
-function addOneDayIso(iso: string): string {
-  const d = new Date(iso);
+/** Giờ giao trả dự kiến: LUÔN LUÔN 7h tối mai (19:00 ngày mai) — ISO để lưu */
+function estimatedReturnIso(): string {
+  const d = new Date();
   d.setDate(d.getDate() + 1);
+  d.setHours(19, 0, 0, 0);
   return d.toISOString();
 }
 
-/** Giờ giao trả dự kiến = giờ lấy đồ + 1 ngày, dạng "20:00 ngày mai" */
-function formatReturnEstimate(pickupIso: string): string {
-  const d = new Date(pickupIso);
-  d.setDate(d.getDate() + 1);
-  const hh = `${d.getHours()}`.padStart(2, '0');
-  const mm = `${d.getMinutes()}`.padStart(2, '0');
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const isTomorrow = d.toDateString() === tomorrow.toDateString();
-  const dayLabel = isTomorrow
-    ? 'ngày mai'
-    : `${`${d.getDate()}`.padStart(2, '0')}/${`${d.getMonth() + 1}`.padStart(2, '0')}`;
-  return `${hh}:${mm} ${dayLabel}`;
-}
+/** Hiển thị giờ giao trả — cố định "7h tối mai" (không cần giờ/ngày chính xác) */
+const RETURN_ESTIMATE_TEXT = '7h tối mai';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -487,7 +476,7 @@ function SimpleRebookView({
                 Đặt lại y như đơn cũ
               </p>
               <p className="mt-1 text-xs opacity-90">
-                Lấy đồ {formatSlotText(findSlot(slots, deliveryAt))} · giao trả {formatReturnEstimate(deliveryAt)}
+                Lấy đồ {formatSlotText(findSlot(slots, deliveryAt))} · giao trả {RETURN_ESTIMATE_TEXT}
               </p>
             </div>
             <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-lg">
@@ -542,7 +531,7 @@ function RebookConfirmDialog({
         phone: prefill.customer.phone.trim(),
         address: (prefill.customer.address ?? '').trim(),
         pickupAt: deliveryAt, // slot khách chọn = giờ LẤY đồ
-        deliveryAt: addOneDayIso(deliveryAt), // giờ giao trả dự kiến = lấy + 1 ngày
+        deliveryAt: estimatedReturnIso(), // giao trả luôn là 7h tối mai
         items: prefill.items.map((i) => ({
           productId: i.productId ?? undefined,
           name: i.name,
@@ -592,7 +581,7 @@ function RebookConfirmDialog({
             />
             <InfoLine
               icon={<Package className="h-4 w-4" />}
-              text={`Dự kiến giao trả: ${formatReturnEstimate(deliveryAt)}`}
+              text={`Dự kiến giao trả: ${RETURN_ESTIMATE_TEXT}`}
             />
           </div>
         </div>
@@ -697,7 +686,7 @@ function CustomBookingForm({
         phone: phone.trim(),
         address: address.trim(),
         pickupAt: deliveryAt, // slot khách chọn = giờ LẤY đồ
-        deliveryAt: addOneDayIso(deliveryAt), // giờ giao trả dự kiến = lấy + 1 ngày
+        deliveryAt: estimatedReturnIso(), // giao trả luôn là 7h tối mai
         note: note.trim() || undefined,
         items: selectedItems,
       }),
