@@ -42,3 +42,20 @@ export function getEffectivePrice(
   const match = sorted.find(t => quantity >= t.minQty);
   return match ? match.price : product.price;
 }
+
+/**
+ * Thành tiền 1 dòng (đồng bộ app/backend):
+ *  - Có cân (weight > 0): cân × đơn giá × SL  (giặt sấy tính theo kg)
+ *  - Không cân: SL × đơn giá  (tính theo cái)
+ */
+export function calcLineTotal(item: {
+  quantity: number | string | null | undefined;
+  unitPrice: number | string | null | undefined;
+  weight?: number | string | null;
+}): number {
+  const qty = Number(item.quantity || 0);
+  const price = Number(item.unitPrice || 0);
+  const weight = Number(item.weight || 0);
+  if (weight > 0) return weight * price * (qty || 1);
+  return qty * price;
+}

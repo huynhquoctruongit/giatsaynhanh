@@ -25,7 +25,7 @@ import { customerApi } from '@/services/api/customer.api';
 import { productApi } from '@/services/api/product.api';
 import { orderApi } from '@/services/api/order.api';
 import { extractError } from '@/services/api/client';
-import { formatCurrency, getEffectivePrice } from '@/lib/utils';
+import { calcLineTotal, formatCurrency, getEffectivePrice } from '@/lib/utils';
 import {
   orderFormSchema,
   type OrderFormInput,
@@ -67,10 +67,7 @@ function NewOrderForm() {
   const { control, register, handleSubmit, setValue, watch, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const items = watch('items');
-  const total = items.reduce(
-    (sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0),
-    0,
-  );
+  const total = items.reduce((sum, i) => sum + calcLineTotal(i), 0);
 
   // Đổ dữ liệu đơn vào form khi edit
   useEffect(() => {
@@ -211,8 +208,7 @@ function NewOrderForm() {
           <CardContent className="space-y-3">
             {fields.map((field, index) => {
               const row = items[index];
-              const subtotal =
-                Number(row?.quantity || 0) * Number(row?.unitPrice || 0);
+              const subtotal = calcLineTotal(row ?? {});
               return (
                 <div
                   key={field.id}

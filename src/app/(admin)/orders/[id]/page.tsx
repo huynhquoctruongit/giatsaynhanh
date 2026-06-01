@@ -17,7 +17,7 @@ import { orderApi } from '@/services/api/order.api';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
 import { calcInvoiceTotals } from '@/lib/invoice-totals';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { calcLineTotal, formatCurrency, formatDateTime } from '@/lib/utils';
 import {
   NEXT_STATUS_TRANSITIONS,
   ORDER_STATUS_LABEL,
@@ -118,7 +118,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   const showDiscount = settings.invoiceShowDebt && discount > 0;
 
   const itemsHtml = order.items.map((it, idx) => {
-    const lineTotal = it.unitPrice * it.quantity;
+    const lineTotal = calcLineTotal(it);
     const sl = it.weight ? `${it.quantity} (${it.weight}kg)` : `${it.quantity}`;
     return `<tr>
       <td style="border:1px solid #bbb;padding:3px 5px">${idx + 1}. ${it.name}</td>
@@ -378,7 +378,7 @@ function InvoicePreviewPanel({
                       {it.weight ? `${it.quantity} (${it.weight}kg)` : it.quantity}
                     </td>
                     <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {(it.unitPrice * it.quantity).toLocaleString('vi-VN')}
+                      {calcLineTotal(it).toLocaleString('vi-VN')}
                     </td>
                   </tr>
                 ))}
@@ -608,7 +608,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         {it.weight ? ` · ${it.weight}kg` : ''}
                       </p>
                     </div>
-                    <p className="font-semibold">{formatCurrency(it.subtotal ?? it.unitPrice * it.quantity)}</p>
+                    <p className="font-semibold">{formatCurrency(it.subtotal ?? calcLineTotal(it))}</p>
                   </div>
                 ))}
               </div>

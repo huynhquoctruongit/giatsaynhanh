@@ -36,7 +36,7 @@ import { BookingStatusBadge } from '@/components/common/booking-status-badge';
 import { bookingApi } from '@/services/api/booking.api';
 import { extractError } from '@/services/api/client';
 import { useAuth } from '@/hooks/use-auth';
-import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { calcLineTotal, formatCurrency, formatDateTime } from '@/lib/utils';
 import { BookingStatus } from '@/helpers/enums/booking-status';
 
 export default function BookingDetailPage({
@@ -159,7 +159,7 @@ export default function BookingDetailPage({
     booking.status === BookingStatus.CANCELLED;
 
   const total = booking.items.reduce(
-    (sum, i) => sum + i.quantity * i.unitPrice,
+    (sum, i) => sum + calcLineTotal(i),
     0,
   );
 
@@ -301,9 +301,7 @@ export default function BookingDetailPage({
                       </p>
                     </div>
                     <p className="font-semibold">
-                      {formatCurrency(
-                        it.subtotal ?? it.unitPrice * it.quantity,
-                      )}
+                      {formatCurrency(it.subtotal ?? calcLineTotal(it))}
                     </p>
                   </div>
                 ))}
