@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -642,6 +643,7 @@ function CustomBookingForm({
   }, [prefill.items]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(initialSelection);
+  const [showAllServices, setShowAllServices] = useState(false);
 
   const contactRef = useRef<HTMLDivElement>(null);
 
@@ -679,6 +681,20 @@ function CustomBookingForm({
         })),
     [prefill.services, selectedIds],
   );
+
+  // Mặc định chỉ hiện 4 dịch vụ ưu tiên cao nhất (theo sortOrder từ backend);
+  // luôn kèm dịch vụ đã chọn nằm ngoài top-4 để khách thấy lựa chọn của mình.
+  const VISIBLE_SERVICES = 4;
+  const visibleServices = useMemo(() => {
+    if (showAllServices) return prefill.services;
+    const top = prefill.services.slice(0, VISIBLE_SERVICES);
+    const topIds = new Set(top.map((s) => s.id));
+    const extraSelected = prefill.services.filter(
+      (s) => selectedIds.has(s.id) && !topIds.has(s.id),
+    );
+    return [...top, ...extraSelected];
+  }, [showAllServices, prefill.services, selectedIds]);
+  const hiddenServicesCount = prefill.services.length - visibleServices.length;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -745,15 +761,33 @@ function CustomBookingForm({
                 Tiệm chưa cấu hình dịch vụ. Vui lòng liên hệ tiệm.
               </p>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {prefill.services.map((s) => (
-                  <ServiceToggle
-                    key={s.id}
-                    service={s}
-                    selected={selectedIds.has(s.id)}
-                    onToggle={() => toggleService(s.id)}
-                  />
-                ))}
+              <div className="space-y-2">
+                <div className="relative">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {visibleServices.map((s) => (
+                      <ServiceToggle
+                        key={s.id}
+                        service={s}
+                        selected={selectedIds.has(s.id)}
+                        onToggle={() => toggleService(s.id)}
+                      />
+                    ))}
+                  </div>
+                  {/* Hiệu ứng mờ ở cuối gợi ý còn dịch vụ bên dưới */}
+                  {!showAllServices && hiddenServicesCount > 0 && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 rounded-b-lg bg-gradient-to-t from-card via-card/80 to-transparent" />
+                  )}
+                </div>
+                {!showAllServices && hiddenServicesCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllServices(true)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 bg-primary/5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
+                  >
+                    Xem thêm {hiddenServicesCount} dịch vụ
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             )}
           </div>
