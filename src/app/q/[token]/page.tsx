@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Sparkles,
   Sun,
+  WashingMachine,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -141,16 +142,23 @@ export default function PublicOrderPage({
         {/* Header — gọn */}
         <div className="flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-400">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow">
-            <Package className="h-4 w-4" />
+            <WashingMachine className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold uppercase leading-tight tracking-wide">
               Giặt Sấy Nhanh
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {prefillQuery.data?.customer.name
-                ? `Xin chào, ${prefillQuery.data.customer.name}`
-                : 'Dịch vụ giao nhận đồ tại nhà'}
+              {prefillQuery.data?.customer.name ? (
+                <>
+                  Xin chào,{' '}
+                  <span className="font-bold text-foreground">
+                    {prefillQuery.data.customer.name}
+                  </span>
+                </>
+              ) : (
+                'Dịch vụ giao nhận đồ tại nhà'
+              )}
             </p>
           </div>
         </div>
@@ -179,9 +187,12 @@ export default function PublicOrderPage({
           <PublicBookingFlow token={token} prefill={prefillQuery.data} />
         )}
 
-        <div className="flex items-center justify-center gap-1.5 pt-1 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3 w-3" />
-          <span>Không yêu cầu đăng nhập</span>
+        <div className="flex items-center justify-center gap-1.5 px-2 pt-1 text-center text-xs text-muted-foreground">
+          <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+          <span>
+            Tiệm Giặt sấy nhanh - chất lượng <span className="font-bold">NHÌ</span> Thủ Đức,
+            còn ở đâu <span className="font-bold">NHẤT</span> thì sốp hông biết
+          </span>
         </div>
       </div>
     </div>
@@ -323,7 +334,7 @@ function ActiveOrdersCard({ orders }: { orders: BookingPrefillActiveOrder[] }) {
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 space-y-1.5">
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <Clock className="h-3.5 w-3.5" />
-        Đơn đang xử lý
+        Bạn có những đơn nào ở tiệm
       </p>
       {orders.map((o) => (
         <div
