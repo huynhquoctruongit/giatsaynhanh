@@ -15,7 +15,7 @@ import {
   Package,
   PhoneCall,
   Repeat,
-  ShieldCheck,
+  Smile,
   Sparkles,
   Sun,
   WashingMachine,
@@ -188,7 +188,7 @@ export default function PublicOrderPage({
         )}
 
         <div className="flex items-center justify-center gap-1.5 px-2 pt-1 text-center text-xs text-muted-foreground">
-          <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+          <Smile className="h-3 w-3 flex-shrink-0" />
           <span>
             Tiệm Giặt sấy nhanh - chất lượng <span className="font-bold">NHÌ</span> Thủ Đức,
             còn ở đâu <span className="font-bold">NHẤT</span> thì sốp hông biết
