@@ -56,20 +56,21 @@ interface OrderData {
   qr?: { url: string } | null;
 }
 
-/** Dòng quảng cáo freeship theo ngưỡng cấu hình */
-function freeShipLine(threshold?: number | null): string {
+/** Dòng freeship — tách "MIỄN PHÍ" (in đậm) khỏi phần sau (in thường) cho nổi bật */
+function freeShipLine(threshold?: number | null): { lead: string; rest: string } {
   const t = Number(threshold ?? 0);
   if (t > 0) {
     const k = t % 1000 === 0 ? `${t / 1000}k` : `${t.toLocaleString('vi-VN')}đ`;
-    return `MIỄN PHÍ giao nhận cho đơn hàng trên ${k}`;
+    return { lead: 'MIỄN PHÍ', rest: ` giao nhận cho đơn hàng trên ${k}` };
   }
-  return 'Miễn phí giao nhận tận nơi';
+  return { lead: 'MIỄN PHÍ', rest: ' giao nhận tận nơi' };
 }
 
 function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: string): string {
   const base = settings.invoiceFontSize ?? 13;
   const customerFs = settings.customerNameFontSize ?? 22;
   const sm = Math.max(base - 2, 9);
+  const freeShip = freeShipLine(settings.freeShipThreshold);
 
   const barsHtml = (() => {
     const bars = [3,1,2,1,3,2,1,2,1,3,1,2,3,1,1,2,3,1,2,1,1,3,2,1,3,2,1,1,2,3,1];
@@ -160,7 +161,6 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <hr class="divider"/>
 
   <div style="padding: 4px 10px 6px; text-align:center;">
-    <p style="font-size:${sm}px;color:#888;letter-spacing:1px">KHÁCH HÀNG</p>
     <p style="font-size:${customerFs}px;font-weight:900;line-height:1.2;word-break:break-word">${order.customer?.name ?? '—'}</p>
     ${order.customer?.phone ? `<p style="font-size:${sm}px;color:#444">SĐT: ${order.customer.phone}</p>` : ''}
     ${order.customer?.address ? `<p style="font-size:${sm}px;color:#444">ĐC: ${order.customer.address}</p>` : ''}
@@ -198,7 +198,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   ${settings.invoiceShowQR && qrDataUrl ? `
   <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
     <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
-    <p style="font-size:${sm}px;margin-top:2px">${freeShipLine(settings.freeShipThreshold)}</p>
+    <p style="font-size:${sm}px;margin-top:2px;font-weight:400"><b style="font-weight:900">${freeShip.lead}</b>${freeShip.rest}</p>
     <div style="display:flex;justify-content:center;margin-top:8px">
       <img src="${qrDataUrl}" style="width:150px;height:150px"/>
     </div>
@@ -258,6 +258,7 @@ function InvoicePreviewPanel({
   const base = settings.invoiceFontSize ?? 13;
   const customerFs = settings.customerNameFontSize ?? 22;
   const sm = Math.max(base - 2, 9);
+  const freeShip = freeShipLine(settings.freeShipThreshold);
 
   const date = new Date(order.createdAt);
   const dateStr = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
@@ -307,7 +308,6 @@ function InvoicePreviewPanel({
 
           {/* Customer */}
           <div style={{ padding: '4px 10px 6px', textAlign: 'center' }}>
-            <p style={{ fontSize: sm, color: '#888', letterSpacing: 1 }}>KHÁCH HÀNG</p>
             <p style={{ fontSize: customerFs, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
               {order.customer?.name ?? '—'}
             </p>
@@ -384,7 +384,7 @@ function InvoicePreviewPanel({
           {settings.invoiceShowQR && qrDataUrl && (
             <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
               <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
-              <p style={{ fontSize: sm, marginTop: 2 }}>{freeShipLine(settings.freeShipThreshold)}</p>
+              <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
