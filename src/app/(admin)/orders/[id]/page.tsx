@@ -142,6 +142,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   </style>
 </head>
 <body>
+  ${order.fromBooking ? `<div style="text-align:center;padding:6px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
   <div style="padding: 10px 10px 4px; text-align: center;">
     ${settings.invoiceShowLogo && settings.logo ? `<img src="${settings.logo}" style="height:40px;margin-bottom:4px;"/>` : ''}
     ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base+4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
@@ -202,11 +203,6 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     <div style="display:flex;justify-content:center;margin-top:8px">
       <img src="${qrDataUrl}" style="width:150px;height:150px"/>
     </div>
-  </div>` : ''}
-
-  ${order.fromBooking ? `
-  <div style="text-align:center;margin:8px 10px 2px">
-    <span style="display:inline-block;border:2px solid #000;border-radius:8px;padding:4px 12px;font-weight:900;letter-spacing:0.5px;font-size:${base}px">🚚 ĐƠN GIAO TẬN NHÀ</span>
   </div>` : ''}
 
   <hr class="divider"/>
@@ -276,6 +272,14 @@ function InvoicePreviewPanel({
 
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: '100%', lineHeight: 1.4 }}>
+        {/* Tag SHIPPING (đơn ship) — trên cùng */}
+        {order.fromBooking && (
+          <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
+            <span style={{ display: 'inline-block', background: '#000', color: '#fff', borderRadius: 999, padding: '3px 18px', fontWeight: 900, letterSpacing: 2, fontSize: base + 2 }}>
+              SHIPPING
+            </span>
+          </div>
+        )}
         {/* Header */}
         <div style={{ paddingBottom: 4, textAlign: 'center' }}>
             {settings.invoiceShowLogo && settings.logo && (
@@ -392,14 +396,6 @@ function InvoicePreviewPanel({
             </div>
           )}
 
-          {/* Tag SHIP cho đơn đặt lịch — bottom, center */}
-          {order.fromBooking && (
-            <div style={{ textAlign: 'center', margin: '8px 10px 2px' }}>
-              <span style={{ display: 'inline-block', border: '2px solid #000', borderRadius: 8, padding: '4px 12px', fontWeight: 900, letterSpacing: 0.5, fontSize: base }}>
-                🚚 ĐƠN GIAO TẬN NHÀ
-              </span>
-            </div>
-          )}
 
           {/* Footer */}
           <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
