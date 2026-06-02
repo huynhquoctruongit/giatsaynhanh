@@ -67,13 +67,13 @@ function LoginInner() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                autoComplete="username"
+                autoComplete="off"
                 placeholder="Email"
                 {...register('email')}
               />
@@ -86,7 +86,7 @@ function LoginInner() {
               <Input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="off"
                 {...register('password')}
               />
               {errors.password && (
