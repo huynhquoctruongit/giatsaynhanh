@@ -29,9 +29,11 @@ import {
 import { useDebounce } from '@/hooks/use-debounce';
 
 const ALL = '__ALL__';
+const BOOKING = 'BOOKING';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: ALL, label: 'Tất cả' },
+  { value: BOOKING, label: 'Đơn đặt' },
   ...( Object.entries(ORDER_STATUS_LABEL) as [OrderStatus, string][]).map(
     ([value, label]) => ({ value, label }),
   ),
@@ -54,13 +56,18 @@ export default function OrdersPage() {
     queryFn: () =>
       orderApi.list({
         search: debounced || undefined,
-        status: status === ALL ? undefined : (status as OrderStatus),
+        status: status === ALL || status === BOOKING ? undefined : (status as OrderStatus),
+        fromBooking: status === BOOKING ? true : undefined,
         pageSize: 50,
       }),
   });
 
   const counts = countsQuery.data ?? {};
-  const totalAll = Object.values(counts).reduce((s, n) => s + n, 0);
+  // "Tất cả" không cộng key BOOKING (lát cắt riêng theo fromBooking)
+  const totalAll = Object.entries(counts).reduce(
+    (s, [k, n]) => (k === 'BOOKING' ? s : s + n),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -151,7 +158,14 @@ export default function OrdersPage() {
                   onClick={() => router.push(`/orders/${o.id}`)}
                 >
                   <TableCell className="font-mono text-sm font-semibold text-primary">
-                    {o.code}
+                    <span className="inline-flex items-center gap-2">
+                      {o.code}
+                      {o.fromBooking && (
+                        <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-white">
+                          SHIPPING
+                        </span>
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <p className="font-medium">{o.customer?.name ?? '-'}</p>

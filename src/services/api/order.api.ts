@@ -11,6 +11,7 @@ export interface OrderListQuery {
   search?: string;
   status?: OrderStatus;
   customerId?: string;
+  fromBooking?: boolean;
   page?: number;
   pageSize?: number;
 }
