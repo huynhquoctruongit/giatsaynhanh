@@ -9,8 +9,9 @@ export interface StaffMember {
   phone: string | null;
   role: UserRole;
   isActive: boolean;
-  permissions: string[];
-  orderViewTimeLimit: number | null;
+  // Backend trả về dạng map {KEY: true}; FE gửi lên dạng mảng key đang bật
+  permissions: Record<string, boolean>;
+  orderViewTimeLimit: number | string | null;
   createdAt: string;
 }
 

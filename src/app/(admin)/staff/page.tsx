@@ -172,7 +172,14 @@ export default function StaffPage() {
 
   function openPermissions(s: StaffMember) {
     setPermTarget(s);
-    setSelectedPerms(s.permissions ?? []);
+    // Backend trả map {KEY:true} → đổi sang mảng key đang bật cho UI
+    setSelectedPerms(
+      s.permissions
+        ? Object.entries(s.permissions)
+            .filter(([, v]) => v)
+            .map(([k]) => k)
+        : [],
+    );
     setOrderViewTimeLimit(s.orderViewTimeLimit?.toString() ?? '');
     setPermOpen(true);
   }
