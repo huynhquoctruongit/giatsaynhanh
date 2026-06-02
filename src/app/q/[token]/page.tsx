@@ -933,7 +933,7 @@ function SuccessCard() {
       <CardContent>
         <p className="text-sm text-emerald-900/80">
           Cảm ơn bạn đã tin dùng dịch vụ! Vui lòng giữ máy để nhân viên gọi
-          xác nhận thời gian lấy đồ trong ít phút nữa.
+          xác nhận thời gian lấy đồ nhé.
         </p>
       </CardContent>
     </Card>
