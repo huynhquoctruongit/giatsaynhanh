@@ -222,7 +222,9 @@ function PublicBookingFlow({
 
   const hasPhone = !!prefill.customer.phone?.trim();
   const hasAddress = !!prefill.customer.address?.trim();
-  const canQuickRebook = hasPhone && hasAddress && sourceItems.length > 0;
+  // Hiện màn nhanh khi khách đã có SĐT + địa chỉ (KHÔNG bắt buộc có đơn cũ).
+  // Nếu có đơn cũ → "Đặt lại đơn cũ"; nếu chưa → "Chọn dịch vụ" (đã điền sẵn SĐT/địa chỉ).
+  const canQuickRebook = hasPhone && hasAddress;
 
   const slots = useMemo(() => computeDeliverySlots(), []);
   // Mặc định chọn khung GẦN NHẤT còn hợp lệ (chưa qua giờ)
@@ -450,60 +452,77 @@ function SimpleRebookView({
   onConfirm: () => void;
   onCustom: () => void;
 }) {
+  const hasOld = prefill.items.length > 0;
   return (
     <Card className="animate-in border-primary/20 shadow-lg fade-in slide-in-from-bottom-4 duration-500">
       <CardContent className="space-y-5 p-5">
         <div className="space-y-3 rounded-xl bg-muted/40 p-4">
           <InfoLine icon={<MapPin className="h-4 w-4" />} text={prefill.customer.address ?? '—'} />
           <InfoLine icon={<PhoneCall className="h-4 w-4" />} text={prefill.customer.phone} />
-          <div className="border-t pt-3">
-            <InfoLine
-              icon={<Package className="h-4 w-4" />}
-              text={joinItems(prefill.items) || 'Chưa có dịch vụ'}
-            />
-          </div>
+          {hasOld && (
+            <div className="border-t pt-3">
+              <InfoLine icon={<Package className="h-4 w-4" />} text={joinItems(prefill.items)} />
+            </div>
+          )}
         </div>
 
-        <DeliverySlotPicker
-          slots={slots}
-          value={deliveryAt}
-          onChange={setDeliveryAt}
-        />
+        {hasOld ? (
+          <>
+            <DeliverySlotPicker slots={slots} value={deliveryAt} onChange={setDeliveryAt} />
 
-        {/* CTA chính — siêu nổi bật */}
-        <button
-          onClick={onConfirm}
-          className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-primary to-blue-500 p-5 text-left text-white shadow-xl shadow-primary/40 ring-4 ring-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary/50 active:scale-[0.98] active:translate-y-0 focus:outline-none focus:ring-primary/40 animate-glow"
-        >
-          {/* Shimmer */}
-          <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
-
-          <div className="relative flex items-center justify-between gap-3">
-            <div>
-              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] opacity-95">
-                <Sparkles className="h-3.5 w-3.5" />
-                Chạm để đặt
+            {/* CTA — đặt lại y như đơn cũ */}
+            <button
+              onClick={onConfirm}
+              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-primary to-blue-500 p-5 text-left text-white shadow-xl shadow-primary/40 ring-4 ring-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary/50 active:scale-[0.98] active:translate-y-0 focus:outline-none focus:ring-primary/40 animate-glow"
+            >
+              <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+              <div className="relative flex items-center justify-between gap-3">
+                <div>
+                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] opacity-95">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Chạm để đặt
+                  </div>
+                  <p className="text-2xl font-extrabold leading-tight">Đặt lại y như đơn cũ</p>
+                  <p className="mt-1 text-xs opacity-90">
+                    Lấy đồ {formatSlotText(findSlot(slots, deliveryAt))} · giao trả {RETURN_ESTIMATE_TEXT}
+                  </p>
+                </div>
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-lg">
+                  <ChevronRight className="h-7 w-7 animate-nudge" strokeWidth={3} />
+                </div>
               </div>
-              <p className="text-2xl font-extrabold leading-tight">
-                Đặt lại y như đơn cũ
-              </p>
-              <p className="mt-1 text-xs opacity-90">
-                Lấy đồ {formatSlotText(findSlot(slots, deliveryAt))} · giao trả {RETURN_ESTIMATE_TEXT}
-              </p>
-            </div>
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-lg">
-              <ChevronRight className="h-7 w-7 animate-nudge" strokeWidth={3} />
-            </div>
-          </div>
-        </button>
+            </button>
 
-        <button
-          onClick={onCustom}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted/30 hover:text-foreground"
-        >
-          <Edit3 className="h-4 w-4" />
-          Thay đổi thông tin
-        </button>
+            <button
+              onClick={onCustom}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed py-3 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-muted/30 hover:text-foreground"
+            >
+              <Edit3 className="h-4 w-4" />
+              Thay đổi thông tin
+            </button>
+          </>
+        ) : (
+          /* Khách đã có SĐT + địa chỉ nhưng chưa có đơn cũ → đặt đơn mới nhanh */
+          <button
+            onClick={onCustom}
+            className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-primary to-blue-500 p-5 text-left text-white shadow-xl shadow-primary/40 ring-4 ring-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-primary/50 active:scale-[0.98] focus:outline-none animate-glow"
+          >
+            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+            <div className="relative flex items-center justify-between gap-3">
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.15em] opacity-95">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Giao nhận tận nhà
+                </div>
+                <p className="text-2xl font-extrabold leading-tight">Chọn dịch vụ để đặt đơn</p>
+                <p className="mt-1 text-xs opacity-90">Giao tới: {prefill.customer.address}</p>
+              </div>
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-lg">
+                <ChevronRight className="h-7 w-7 animate-nudge" strokeWidth={3} />
+              </div>
+            </div>
+          </button>
+        )}
       </CardContent>
     </Card>
   );
