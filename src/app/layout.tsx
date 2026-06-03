@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://giatsaynhanh.vercel.app'),
   title: 'GIẶT SẤY NHANH - QUẢN LÝ ĐƠN',
   description: 'Quản lý đơn giặt sấy với QR code',
 };
