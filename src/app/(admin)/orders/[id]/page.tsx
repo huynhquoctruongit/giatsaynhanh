@@ -103,12 +103,14 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     return `<tr>
       <td style="border:1px solid #bbb;padding:3px 5px">${idx + 1}. ${it.name}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:center;white-space:nowrap">${sl}</td>
+      <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap">${it.unitPrice.toLocaleString('vi-VN')}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap">${lineTotal.toLocaleString('vi-VN')}</td>
     </tr>`;
   }).join('') + (order.fromBooking && shippingFee > 0 ? `
     <tr style="background:#f0fdf4">
       <td style="border:1px solid #bbb;padding:3px 5px;font-weight:600;color:#15803d">🚚 Phí giao hàng</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:center">1</td>
+      <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap;font-weight:600;color:#15803d">${shippingFee.toLocaleString('vi-VN')}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;font-weight:600;color:#15803d">${shippingFee.toLocaleString('vi-VN')}đ</td>
     </tr>` : '');
 
@@ -174,6 +176,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
         <tr>
           <th style="text-align:left">Dịch vụ</th>
           <th style="text-align:center;white-space:nowrap">SL</th>
+          <th style="text-align:right;white-space:nowrap">Đơn giá</th>
           <th style="text-align:right;white-space:nowrap">Thành tiền</th>
         </tr>
       </thead>
@@ -333,6 +336,7 @@ function InvoicePreviewPanel({
                 <tr style={{ background: '#f5f5f5' }}>
                   <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left' }}>Dịch vụ</th>
                   <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>SL</th>
+                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
                   <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
                 </tr>
               </thead>
@@ -344,6 +348,9 @@ function InvoicePreviewPanel({
                       {it.weight ? `${it.quantity} (${it.weight}kg)` : it.quantity}
                     </td>
                     <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {it.unitPrice.toLocaleString('vi-VN')}
+                    </td>
+                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {calcLineTotal(it).toLocaleString('vi-VN')}
                     </td>
                   </tr>
@@ -353,6 +360,9 @@ function InvoicePreviewPanel({
                   <tr style={{ background: '#f0fdf4' }}>
                     <td style={{ border: '1px solid #bbb', padding: '3px 5px', fontWeight: 600, color: '#15803d' }}>🚚 Phí giao hàng</td>
                     <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center' }}>1</td>
+                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, color: '#15803d' }}>
+                      {shippingFee.toLocaleString('vi-VN')}
+                    </td>
                     <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#15803d' }}>
                       {shippingFee.toLocaleString('vi-VN')}đ
                     </td>
