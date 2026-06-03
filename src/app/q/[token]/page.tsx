@@ -222,7 +222,7 @@ function PublicBookingFlow({
 
   const hasPhone = !!prefill.customer.phone?.trim();
   const hasAddress = !!prefill.customer.address?.trim();
-  const canQuickRebook = hasPhone && hasAddress && sourceItems.length > 0;
+  const canQuickRebook = hasPhone && hasAddress;
 
   const slots = useMemo(() => computeDeliverySlots(), []);
   // Mặc định chọn khung GẦN NHẤT còn hợp lệ (chưa qua giờ)
