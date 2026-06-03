@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const TITLE = 'GIẶT SẤY NHANH - ĐẶT GIAO NHẬN TẠI NHÀ QUA MÃ QR';
+const TITLE = 'GIẶT SẤY NHANH - QUÉT QR để đặt giao nhận';
 const DESCRIPTION =
   'Tiệm Giặt Sấy Nhanh - chất lượng NHÌ Thủ Đức, còn ở đâu NHẤT thì sốp hông biết';
 
