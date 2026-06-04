@@ -35,24 +35,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/orders', label: 'Đơn hàng', icon: Package },
-  { href: '/audit', label: 'Rà soát đơn', icon: PackageSearch },
-  { href: '/bookings', label: 'Đặt lịch', icon: CalendarClock },
-  { href: '/customers', label: 'Khách hàng', icon: Users },
-  { href: '/suppliers', label: 'Nhà cung cấp', icon: Truck },
-  { href: '/products', label: 'Sản phẩm', icon: ShoppingBag },
-  { href: '/inventory', label: 'Kho hàng', icon: Warehouse },
-  { href: '/finance', label: 'Thu chi', icon: Wallet },
-  { href: '/debts', label: 'Sổ nợ', icon: BookOpen },
-  { href: '/shifts', label: 'Ca làm việc', icon: Clock },
-  { href: '/reports', label: 'Báo cáo', icon: BarChart2 },
-  { href: '/scanner', label: 'Quét QR', icon: ScanLine },
+  { href: '/admin/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+  { href: '/admin/orders', label: 'Đơn hàng', icon: Package },
+  { href: '/admin/audit', label: 'Rà soát đơn', icon: PackageSearch },
+  { href: '/admin/bookings', label: 'Đặt lịch', icon: CalendarClock },
+  { href: '/admin/customers', label: 'Khách hàng', icon: Users },
+  { href: '/admin/suppliers', label: 'Nhà cung cấp', icon: Truck },
+  { href: '/admin/products', label: 'Sản phẩm', icon: ShoppingBag },
+  { href: '/admin/inventory', label: 'Kho hàng', icon: Warehouse },
+  { href: '/admin/finance', label: 'Thu chi', icon: Wallet },
+  { href: '/admin/debts', label: 'Sổ nợ', icon: BookOpen },
+  { href: '/admin/shifts', label: 'Ca làm việc', icon: Clock },
+  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart2 },
+  { href: '/admin/scanner', label: 'Quét QR', icon: ScanLine },
 ];
 
 const ADMIN_NAV_ITEMS = [
-  { href: '/staff', label: 'Nhân viên', icon: UserCog },
-  { href: '/settings', label: 'Cài đặt', icon: Settings },
+  { href: '/admin/staff', label: 'Nhân viên', icon: UserCog },
+  { href: '/admin/settings', label: 'Cài đặt', icon: Settings },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -151,7 +151,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/orders/new')}>
+              <DropdownMenuItem onClick={() => router.push('/admin/orders/new')}>
                 Tạo đơn mới
               </DropdownMenuItem>
               <DropdownMenuItem onClick={logout} className="text-rose-600">

@@ -72,11 +72,11 @@ export default function DashboardPage() {
   ];
 
   const shortcuts = [
-    { href: '/orders/new', label: 'Tạo đơn', icon: Sparkles, color: 'bg-blue-50 text-blue-600' },
+    { href: '/admin/orders/new', label: 'Tạo đơn', icon: Sparkles, color: 'bg-blue-50 text-blue-600' },
     { href: '/inventory', label: 'Xem kho', icon: Warehouse, color: 'bg-amber-50 text-amber-600' },
     { href: '/finance', label: 'Thu chi', icon: Wallet, color: 'bg-emerald-50 text-emerald-600' },
     { href: '/reports', label: 'Báo cáo', icon: BarChart2, color: 'bg-violet-50 text-violet-600' },
-    { href: '/orders', label: 'Đơn hàng', icon: ClipboardList, color: 'bg-pink-50 text-pink-600' },
+    { href: '/admin/orders', label: 'Đơn hàng', icon: ClipboardList, color: 'bg-pink-50 text-pink-600' },
     { href: '/debts', label: 'Sổ nợ', icon: Truck, color: 'bg-rose-50 text-rose-600' },
   ];
 
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         description="Theo dõi nhanh đơn hàng và hoạt động kinh doanh"
         actions={
           <Button asChild>
-            <Link href="/orders/new">Tạo đơn mới</Link>
+            <Link href="/admin/orders/new">Tạo đơn mới</Link>
           </Button>
         }
       />
@@ -141,7 +141,7 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Đơn hàng gần đây</CardTitle>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/orders" className="gap-1">
+              <Link href="/admin/orders" className="gap-1">
                 Xem tất cả <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -159,7 +159,7 @@ export default function DashboardPage() {
               ordersQuery.data?.items.slice(0, 6).map((o) => (
                 <Link
                   key={o.id}
-                  href={`/orders/${o.id}`}
+                  href={`/admin/orders/${o.id}`}
                   className="flex items-center justify-between rounded-lg border p-3 transition hover:border-primary/40 hover:bg-accent"
                 >
                   <div>

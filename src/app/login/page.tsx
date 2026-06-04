@@ -37,7 +37,7 @@ function LoginInner() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace(searchParams.get('next') ?? '/dashboard');
+      router.replace(searchParams.get('next') ?? '/admin/dashboard');
     }
   }, [isAuthenticated, isLoading, router, searchParams]);
 
@@ -46,7 +46,7 @@ function LoginInner() {
     try {
       await login(values);
       toast.success('Đăng nhập thành công');
-      router.replace(searchParams.get('next') ?? '/dashboard');
+      router.replace(searchParams.get('next') ?? '/admin/dashboard');
     } catch (err) {
       toast.error(extractError(err).message);
     } finally {

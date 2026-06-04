@@ -114,7 +114,7 @@ export default function BookingsPage() {
                 <TableRow
                   key={b.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/bookings/${b.id}`)}
+                  onClick={() => router.push(`/admin/bookings/${b.id}`)}
                 >
                   <TableCell className="font-mono text-sm font-semibold text-primary">
                     {b.code}

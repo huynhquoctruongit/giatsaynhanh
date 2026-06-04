@@ -446,7 +446,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     onSuccess: () => {
       toast.success('Đã xoá đơn');
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      router.push('/orders');
+      router.push('/admin/orders');
     },
     onError: (err) => toast.error(extractError(err).message),
   });
@@ -472,7 +472,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="rounded-lg border border-dashed p-12 text-center">
         <p className="text-sm text-muted-foreground">Không tìm thấy đơn</p>
         <Button variant="ghost" asChild className="mt-3">
-          <Link href="/orders"><ArrowLeft className="h-4 w-4" /> Quay lại</Link>
+          <Link href="/admin/orders"><ArrowLeft className="h-4 w-4" /> Quay lại</Link>
         </Button>
       </div>
     );
@@ -503,7 +503,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             {isAdmin && (
               <>
                 <Button variant="outline" asChild>
-                  <Link href={`/orders/new?edit=${id}`}>
+                  <Link href={`/admin/orders/new?edit=${id}`}>
                     <Pencil className="h-4 w-4" /> Sửa
                   </Link>
                 </Button>
@@ -518,7 +518,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </>
             )}
             <Button variant="ghost" asChild>
-              <Link href="/orders"><ArrowLeft className="h-4 w-4" /> Tất cả đơn</Link>
+              <Link href="/admin/orders"><ArrowLeft className="h-4 w-4" /> Tất cả đơn</Link>
             </Button>
           </div>
         }

@@ -108,7 +108,7 @@ function NewOrderForm() {
         : orderApi.create(toPayload(values)),
     onSuccess: (order) => {
       toast.success(isEditMode ? 'Đã cập nhật đơn' : `Tạo đơn ${order.code} thành công`);
-      router.push(`/orders/${order.id}`);
+      router.push(`/admin/orders/${order.id}`);
     },
     onError: (err) => toast.error(extractError(err).message),
   });
@@ -138,7 +138,7 @@ function NewOrderForm() {
         description={isEditMode ? 'Cập nhật thông tin & sản phẩm của đơn' : 'Chọn khách, thêm sản phẩm và in QR'}
         actions={
           <Button variant="ghost" asChild>
-            <Link href="/orders">
+            <Link href="/admin/orders">
               <ArrowLeft className="h-4 w-4" /> Danh sách đơn
             </Link>
           </Button>
@@ -177,7 +177,7 @@ function NewOrderForm() {
               )}
               <p className="text-xs text-muted-foreground">
                 Chưa có khách?{' '}
-                <Link href="/customers" className="text-primary underline">
+                <Link href="/admin/customers" className="text-primary underline">
                   Thêm khách mới
                 </Link>
               </p>

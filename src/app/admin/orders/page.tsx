@@ -76,7 +76,7 @@ export default function OrdersPage() {
         description="Quản lý toàn bộ đơn giặt sấy"
         actions={
           <Button asChild>
-            <Link href="/orders/new">
+            <Link href="/admin/orders/new">
               <Plus className="h-4 w-4" /> Tạo đơn
             </Link>
           </Button>
@@ -155,7 +155,7 @@ export default function OrdersPage() {
                 <TableRow
                   key={o.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/orders/${o.id}`)}
+                  onClick={() => router.push(`/admin/orders/${o.id}`)}
                 >
                   <TableCell className="font-mono text-sm font-semibold text-primary">
                     <span className="inline-flex items-center gap-2">

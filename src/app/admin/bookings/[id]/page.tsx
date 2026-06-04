@@ -79,7 +79,7 @@ export default function BookingDetailPage({
       qc.invalidateQueries({ queryKey: ['bookings'] });
       qc.invalidateQueries({ queryKey: ['orders'] });
       if (booking.convertedOrder?.id) {
-        router.push(`/orders/${booking.convertedOrder.id}`);
+        router.push(`/admin/orders/${booking.convertedOrder.id}`);
       }
     },
     onError: (err) => toast.error(extractError(err).message),
@@ -106,7 +106,7 @@ export default function BookingDetailPage({
     onSuccess: () => {
       toast.success('Đã xoá đặt lịch');
       qc.invalidateQueries({ queryKey: ['bookings'] });
-      router.push('/bookings');
+      router.push('/admin/bookings');
     },
     onError: (err) => toast.error(extractError(err).message),
   });
@@ -143,7 +143,7 @@ export default function BookingDetailPage({
           Không tìm thấy đặt lịch
         </p>
         <Button variant="ghost" asChild className="mt-3">
-          <Link href="/bookings">
+          <Link href="/admin/bookings">
             <ArrowLeft className="h-4 w-4" /> Quay lại
           </Link>
         </Button>
@@ -186,7 +186,7 @@ export default function BookingDetailPage({
               </>
             )}
             <Button variant="ghost" asChild>
-              <Link href="/bookings">
+              <Link href="/admin/bookings">
                 <ArrowLeft className="h-4 w-4" /> Tất cả đặt lịch
               </Link>
             </Button>
@@ -233,7 +233,7 @@ export default function BookingDetailPage({
               </div>
               {booking.sourceOrder && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/orders/${booking.sourceOrder.id}`}>
+                  <Link href={`/admin/orders/${booking.sourceOrder.id}`}>
                     <Repeat className="h-3.5 w-3.5" /> Đơn gốc{' '}
                     {booking.sourceOrder.code}
                   </Link>
@@ -330,7 +330,7 @@ export default function BookingDetailPage({
                   </p>
                   {booking.convertedOrder && (
                     <Button variant="outline" className="w-full" asChild>
-                      <Link href={`/orders/${booking.convertedOrder.id}`}>
+                      <Link href={`/admin/orders/${booking.convertedOrder.id}`}>
                         Xem đơn {booking.convertedOrder.code}
                       </Link>
                     </Button>
