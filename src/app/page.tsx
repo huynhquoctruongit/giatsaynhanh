@@ -21,13 +21,31 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-/* ──────────────────────────────────────────────────────────────
- * Thông tin tiệm — chỉnh ở đây (SĐT / địa chỉ / giờ mở cửa)
- * ────────────────────────────────────────────────────────────── */
-const BRAND = 'Giặt Sấy Nhanh';
-const PHONE = '0903 000 000'; // TODO: thay số điện thoại thật
-const ADDRESS = 'Thủ Đức, TP. Hồ Chí Minh';
-const HOURS = '7:00 – 21:00 mỗi ngày';
+/* Thông tin tiệm lấy ĐỘNG từ Cài đặt (GET /settings/public).
+ * Có fallback nếu API lỗi/chưa cấu hình → trang vẫn hiển thị bình thường. */
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://laundry-qr-backend.onrender.com/api';
+
+interface ShopInfo {
+  shopName?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  openingHours?: string | null;
+}
+
+async function getShopInfo(): Promise<ShopInfo | null> {
+  try {
+    const res = await fetch(`${API_BASE}/settings/public`, {
+      next: { revalidate: 300 }, // làm mới mỗi 5 phút (ISR)
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return (json?.data ?? null) as ShopInfo | null;
+  } catch {
+    return null;
+  }
+}
 
 export const metadata: Metadata = {
   title: 'Giặt Sấy Nhanh — Giặt sấy giao nhận tận nhà ở Thủ Đức',
@@ -61,7 +79,15 @@ const FEATURES = [
   { icon: ShieldCheck, title: 'Giặt riêng từng khách', desc: 'Đồ của bạn giặt riêng, không lẫn — sạch và an tâm.' },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const shop = await getShopInfo();
+  const BRAND = shop?.shopName?.trim() || 'Giặt Sấy Nhanh';
+  const PHONE = shop?.phone?.trim() || '';
+  const ADDRESS = shop?.address?.trim() || 'Thủ Đức, TP. Hồ Chí Minh';
+  const HOURS = shop?.openingHours?.trim() || '7:00 – 21:00 mỗi ngày';
+  const hasPhone = PHONE.length > 0;
+  const telHref = `tel:${PHONE.replace(/\s/g, '')}`;
+
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* ───────── Header ───────── */}
@@ -122,10 +148,16 @@ export default function LandingPage() {
                 Đặt giặt ngay
                 <ArrowRight className="h-5 w-5" />
               </Link>
-              <a href={`tel:${PHONE.replace(/\s/g, '')}`} className={BTN_GHOST}>
-                <Phone className="h-5 w-5" />
-                Gọi đặt: {PHONE}
-              </a>
+              {hasPhone ? (
+                <a href={telHref} className={BTN_GHOST}>
+                  <Phone className="h-5 w-5" />
+                  Gọi đặt: {PHONE}
+                </a>
+              ) : (
+                <a href="#services" className={BTN_GHOST}>
+                  Xem dịch vụ
+                </a>
+              )}
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">
               <span className="inline-flex items-center gap-1.5">
@@ -281,13 +313,15 @@ export default function LandingPage() {
               Đặt giặt ngay
               <ArrowRight className="h-5 w-5" />
             </Link>
-            <a
-              href={`tel:${PHONE.replace(/\s/g, '')}`}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/40 px-7 text-base font-semibold text-white transition hover:bg-white/10"
-            >
-              <Phone className="h-5 w-5" />
-              {PHONE}
-            </a>
+            {hasPhone && (
+              <a
+                href={telHref}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/40 px-7 text-base font-semibold text-white transition hover:bg-white/10"
+              >
+                <Phone className="h-5 w-5" />
+                {PHONE}
+              </a>
+            )}
           </div>
         </div>
       </section>
@@ -311,10 +345,12 @@ export default function LandingPage() {
           <div>
             <h4 className="text-sm font-bold uppercase tracking-wide text-slate-400">Liên hệ</h4>
             <ul className="mt-4 space-y-3 text-sm text-slate-600">
-              <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" />
-                <a href={`tel:${PHONE.replace(/\s/g, '')}`} className="hover:text-slate-900">{PHONE}</a>
-              </li>
+              {hasPhone && (
+                <li className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-primary" />
+                  <a href={telHref} className="hover:text-slate-900">{PHONE}</a>
+                </li>
+              )}
               <li className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" /> {ADDRESS}
               </li>
