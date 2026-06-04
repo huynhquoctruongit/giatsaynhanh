@@ -61,8 +61,8 @@ export default function OrdersPage() {
   const dateTo = new Date(`${activeDateStr}T23:59:59.999`).toISOString();
 
   const countsQuery = useQuery({
-    queryKey: ['orders', 'status-counts'],
-    queryFn: () => orderApi.statusCounts(),
+    queryKey: ['orders', 'status-counts', { dateFrom, dateTo }],
+    queryFn: () => orderApi.statusCounts({ dateFrom, dateTo }),
     staleTime: 30_000,
   });
 
@@ -81,11 +81,8 @@ export default function OrdersPage() {
   });
 
   const counts = countsQuery.data ?? {};
-  // "Tất cả" không cộng key BOOKING (lát cắt riêng theo fromBooking)
-  const totalAll = Object.entries(counts).reduce(
-    (s, [k, n]) => (k === 'BOOKING' ? s : s + n),
-    0,
-  );
+  // "Tất cả" = số đơn tạo trong ngày (BE trả key ALL theo ngày được chọn)
+  const totalAll = counts.ALL ?? 0;
 
   return (
     <div className="space-y-6">

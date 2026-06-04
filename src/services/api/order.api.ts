@@ -34,8 +34,8 @@ export interface CreateOrderPayload {
 }
 
 export const orderApi = {
-  statusCounts: () =>
-    unwrap<Record<string, number>>(apiClient.get('/orders/status-counts')),
+  statusCounts: (query: { dateFrom?: string; dateTo?: string } = {}) =>
+    unwrap<Record<string, number>>(apiClient.get('/orders/status-counts', { params: query })),
   list: (query: OrderListQuery = {}) =>
     unwrap<PaginatedResult<Order>>(apiClient.get('/orders', { params: query })),
   detail: (id: string) => unwrap<Order>(apiClient.get(`/orders/${id}`)),
