@@ -332,9 +332,9 @@ function formatSlotText(slot: TimeSlot | undefined): string {
 function ActiveOrdersCard({ orders }: { orders: BookingPrefillActiveOrder[] }) {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-400 space-y-1.5">
-      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground">
         <Clock className="h-3.5 w-3.5" />
-        Bạn có những đơn nào ở tiệm
+        Cưng là khách guột của tiệm đó nhé 💛
       </p>
       {orders.map((o) => (
         <div
