@@ -496,8 +496,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       <PageHeader
-        title={order.code}
-        description={`Tạo lúc ${formatDateTime(order.createdAt)}`}
+        title={order.customer?.name ?? '—'}
+        description={`Mã đơn ${order.code} · Tạo lúc ${formatDateTime(order.createdAt)}`}
         actions={
           <div className="flex items-center gap-2">
             {isAdmin && (

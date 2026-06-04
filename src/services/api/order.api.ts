@@ -12,6 +12,8 @@ export interface OrderListQuery {
   status?: OrderStatus;
   customerId?: string;
   fromBooking?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   pageSize?: number;
 }

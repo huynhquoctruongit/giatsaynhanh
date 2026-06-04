@@ -45,6 +45,21 @@ export default function OrdersPage() {
   const debounced = useDebounce(search);
   const [status, setStatus] = useState<string>(ALL);
 
+  // Lọc theo ngày — mặc định Hôm nay
+  const [dateMode, setDateMode] = useState<'today' | 'yesterday' | 'custom'>('today');
+  const [customDate, setCustomDate] = useState(''); // 'YYYY-MM-DD'
+
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const activeDateStr =
+    dateMode === 'today'
+      ? ymd(new Date())
+      : dateMode === 'yesterday'
+        ? ymd(new Date(Date.now() - 86400000))
+        : customDate || ymd(new Date());
+  const dateFrom = new Date(`${activeDateStr}T00:00:00`).toISOString();
+  const dateTo = new Date(`${activeDateStr}T23:59:59.999`).toISOString();
+
   const countsQuery = useQuery({
     queryKey: ['orders', 'status-counts'],
     queryFn: () => orderApi.statusCounts(),
@@ -52,12 +67,15 @@ export default function OrdersPage() {
   });
 
   const query = useQuery({
-    queryKey: ['orders', { search: debounced, status }],
+    queryKey: ['orders', { search: debounced, status, dateFrom, dateTo }],
     queryFn: () =>
       orderApi.list({
         search: debounced || undefined,
         status: status === ALL || status === BOOKING ? undefined : (status as OrderStatus),
         fromBooking: status === BOOKING ? true : undefined,
+        // BE bỏ qua lọc ngày khi đang search (tìm xuyên suốt mọi ngày)
+        dateFrom,
+        dateTo,
         pageSize: 50,
       }),
   });
@@ -93,6 +111,47 @@ export default function OrdersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
+
+        {/* Date filter — mặc định Hôm nay */}
+        <div className="flex flex-wrap items-center gap-2">
+          {([
+            { v: 'today', label: 'Hôm nay' },
+            { v: 'yesterday', label: 'Hôm qua' },
+          ] as const).map((d) => (
+            <button
+              key={d.v}
+              onClick={() => setDateMode(d.v)}
+              className={cn(
+                'rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                dateMode === d.v
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground',
+              )}
+            >
+              {d.label}
+            </button>
+          ))}
+          <input
+            type="date"
+            value={dateMode === 'custom' ? customDate : ''}
+            max={ymd(new Date())}
+            onChange={(e) => {
+              setCustomDate(e.target.value);
+              setDateMode(e.target.value ? 'custom' : 'today');
+            }}
+            className={cn(
+              'rounded-full border px-3 py-1 text-sm font-medium outline-none transition-colors',
+              dateMode === 'custom'
+                ? 'border-primary text-foreground'
+                : 'border-border bg-background text-muted-foreground hover:border-primary/50',
+            )}
+          />
+          {debounced && (
+            <span className="text-xs text-muted-foreground">
+              (đang tìm kiếm — bỏ qua lọc ngày)
+            </span>
+          )}
         </div>
 
         {/* Status chips */}
@@ -142,12 +201,12 @@ export default function OrdersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Mã đơn</TableHead>
                 <TableHead>Khách hàng</TableHead>
                 <TableHead>Sản phẩm</TableHead>
                 <TableHead className="text-right">Tổng tiền</TableHead>
                 <TableHead>Trạng thái</TableHead>
-                <TableHead>Tạo lúc</TableHead>
+                <TableHead>Thời gian</TableHead>
+                <TableHead>Mã đơn</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -157,18 +216,16 @@ export default function OrdersPage() {
                   className="cursor-pointer"
                   onClick={() => router.push(`/admin/orders/${o.id}`)}
                 >
-                  <TableCell className="font-mono text-sm font-semibold text-primary">
-                    <span className="inline-flex items-center gap-2">
-                      {o.code}
+                  {/* Khách hàng = thông tin chính (to + đậm) */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <p className="text-base font-semibold">{o.customer?.name ?? '-'}</p>
                       {o.fromBooking && (
                         <span className="rounded-full bg-black px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-white">
                           SHIPPING
                         </span>
                       )}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <p className="font-medium">{o.customer?.name ?? '-'}</p>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {o.customer?.phone ?? ''}
                     </p>
@@ -183,7 +240,13 @@ export default function OrdersPage() {
                     <OrderStatusBadge status={o.status} />
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(o.createdAt)}
+                    {o.status === 'DELIVERED' && o.deliveredAt
+                      ? `Giao ${formatDateTime(o.deliveredAt)}`
+                      : formatDateTime(o.createdAt)}
+                  </TableCell>
+                  {/* Mã đơn = phụ (nhỏ, mờ) */}
+                  <TableCell className="font-mono text-xs text-muted-foreground">
+                    {o.code}
                   </TableCell>
                 </TableRow>
               ))}
