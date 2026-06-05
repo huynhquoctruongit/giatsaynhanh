@@ -49,7 +49,7 @@ export default function DashboardPage() {
       color: 'bg-blue-50 text-blue-600',
     },
     {
-      label: 'Lợi nhuận hôm nay',
+      label: 'Đã thu hôm nay',
       value: report?.profit ?? 0,
       isCurrency: true,
       icon: TrendingUp,
