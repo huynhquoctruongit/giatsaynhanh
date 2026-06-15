@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  TrendingDown,
-  Wallet,
-  ShoppingCart,
-  Package,
-  AlertTriangle,
-  BarChart2,
-} from 'lucide-react';
+import { ShoppingCart, Wallet, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,10 +17,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { reportApi } from '@/services/api/report.api';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { ORDER_STATUS_LABEL } from '@/helpers/enums/order-status';
-
-type Tab = 'financial' | 'sales' | 'inventory';
 
 // Định dạng ngày theo GIỜ ĐỊA PHƯƠNG (không dùng toISOString để tránh lệch ngày
 // với máy ở múi giờ +7).
@@ -83,7 +74,6 @@ function DailyBarChart({ data }: { data: { date: string; amount: number }[] }) {
 }
 
 export default function ReportsPage() {
-  const [tab, setTab] = useState<Tab>('financial');
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -115,397 +105,162 @@ export default function ReportsPage() {
 
   const range = { from: startIso(from), to: endIso(to) };
 
-  const financialQuery = useQuery({
-    queryKey: ['report', 'financial', { from, to }],
-    queryFn: () => reportApi.financial(range),
-    enabled: tab === 'financial',
-  });
-
   const salesQuery = useQuery({
     queryKey: ['report', 'sales', { from, to }],
     queryFn: () => reportApi.sales(range),
-    enabled: tab === 'sales',
   });
-
-  const inventoryQuery = useQuery({
-    queryKey: ['report', 'inventory'],
-    queryFn: () => reportApi.inventory(),
-    enabled: tab === 'inventory',
-  });
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'financial', label: 'Tài chính' },
-    { key: 'sales', label: 'Bán hàng' },
-    { key: 'inventory', label: 'Kho hàng' },
-  ];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Báo cáo"
-        description="Tổng hợp số liệu hoạt động kinh doanh"
-      />
+      <PageHeader title="Báo cáo bán hàng" description="Tổng hợp doanh số theo khoảng thời gian" />
 
-      {/* Tabs */}
+      {/* Bộ lọc ngày */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border bg-muted/30 p-1 gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${tab === t.key ? 'bg-background shadow-sm' : 'text-muted-foreground'}`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        {tab !== 'inventory' && (
-          <>
-            {(
-              [
-                { v: 'today', label: 'Hôm nay' },
-                { v: 'yesterday', label: 'Hôm qua' },
-                { v: 'week', label: 'Tuần này' },
-                { v: 'month', label: 'Tháng này' },
-                { v: 'lastMonth', label: 'Tháng trước' },
-              ] as const
-            ).map((p) => (
-              <Button
-                key={p.v}
-                variant="outline"
-                size="sm"
-                onClick={() => applyPreset(p.v)}
-              >
-                {p.label}
-              </Button>
-            ))}
-            <Input
-              type="date"
-              className="w-40"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-            <span className="text-sm text-muted-foreground">—</span>
-            <Input
-              type="date"
-              className="w-40"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </>
-        )}
+        {(
+          [
+            { v: 'today', label: 'Hôm nay' },
+            { v: 'yesterday', label: 'Hôm qua' },
+            { v: 'week', label: 'Tuần này' },
+            { v: 'month', label: 'Tháng này' },
+            { v: 'lastMonth', label: 'Tháng trước' },
+          ] as const
+        ).map((p) => (
+          <Button key={p.v} variant="outline" size="sm" onClick={() => applyPreset(p.v)}>
+            {p.label}
+          </Button>
+        ))}
+        <Input
+          type="date"
+          className="w-40"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <span className="text-sm text-muted-foreground">—</span>
+        <Input
+          type="date"
+          className="w-40"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        />
       </div>
 
-      {/* Financial tab */}
-      {tab === 'financial' && (
-        <div className="space-y-6">
-          {financialQuery.isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full" />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <Wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Lợi nhuận</p>
-                      <p className="text-xl font-bold text-blue-700">
-                        {formatCurrency(financialQuery.data?.collected ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-                      <TrendingDown className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Chi phí</p>
-                      <p className="text-xl font-bold text-rose-700">
-                        {formatCurrency(financialQuery.data?.expenses ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {/* Income by category */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Thu theo danh mục</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(financialQuery.data?.incomeByCategory ?? {}).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {Object.entries(financialQuery.data?.incomeByCategory ?? {}).map(([cat, amount]) => (
-                          <div key={cat} className="flex items-center justify-between">
-                            <span className="text-sm">{cat}</span>
-                            <span className="text-sm font-medium text-emerald-700">{formatCurrency(amount)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Expense by category */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Chi theo danh mục</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Object.keys(financialQuery.data?.expenseByCategory ?? {}).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {Object.entries(financialQuery.data?.expenseByCategory ?? {}).map(([cat, amount]) => (
-                          <div key={cat} className="flex items-center justify-between">
-                            <span className="text-sm">{cat}</span>
-                            <span className="text-sm font-medium text-rose-700">{formatCurrency(amount)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Lợi nhuận theo ngày */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Lợi nhuận theo ngày</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DailyBarChart data={financialQuery.data?.dailyCollected ?? []} />
-                </CardContent>
-              </Card>
-            </>
-          )}
+      {salesQuery.isLoading ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full" />
+          ))}
         </div>
-      )}
-
-      {/* Sales tab */}
-      {tab === 'sales' && (
+      ) : (
         <div className="space-y-6">
-          {salesQuery.isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full" />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <ShoppingCart className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tổng đơn</p>
-                      <p className="text-xl font-bold">{salesQuery.data?.totalOrders ?? 0}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                      <Wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tổng doanh thu</p>
-                      <p className="text-xl font-bold text-emerald-700">
-                        {formatCurrency(salesQuery.data?.totalRevenue ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-                      <BarChart2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Giá trị trung bình</p>
-                      <p className="text-xl font-bold text-violet-700">
-                        {formatCurrency(salesQuery.data?.avgOrderValue ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tổng đơn</p>
+                  <p className="text-xl font-bold">{salesQuery.data?.totalOrders ?? 0}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <Wallet className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Đã thu</p>
+                  <p className="text-xl font-bold text-emerald-700">
+                    {formatCurrency(salesQuery.data?.collected ?? 0)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                  <BarChart2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Giá trị trung bình</p>
+                  <p className="text-xl font-bold text-violet-700">
+                    {formatCurrency(salesQuery.data?.avgOrderValue ?? 0)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {/* Top products */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Sản phẩm bán chạy</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(salesQuery.data?.topProducts?.length ?? 0) === 0 ? (
-                      <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Sản phẩm</TableHead>
-                            <TableHead className="text-right">SL</TableHead>
-                            <TableHead className="text-right">Doanh thu</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {salesQuery.data?.topProducts.map((p, i) => (
-                            <TableRow key={i}>
-                              <TableCell>{p.name}</TableCell>
-                              <TableCell className="text-right">{p.quantity}</TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatCurrency(p.revenue)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
+          {/* Đã thu theo ngày */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Đã thu theo ngày</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DailyBarChart data={salesQuery.data?.dailyCollected ?? []} />
+            </CardContent>
+          </Card>
 
-                {/* Orders by status */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Đơn hàng theo trạng thái</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {Object.entries(salesQuery.data?.ordersByStatus ?? {}).map(([status, count]) => (
-                        <div key={status} className="flex items-center justify-between">
-                          <span className="text-sm">
-                            {ORDER_STATUS_LABEL[status as keyof typeof ORDER_STATUS_LABEL] ?? status}
-                          </span>
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
-                            {count}
-                          </span>
-                        </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Top products */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Sản phẩm bán chạy</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(salesQuery.data?.topProducts?.length ?? 0) === 0 ? (
+                  <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Sản phẩm</TableHead>
+                        <TableHead className="text-right">SL</TableHead>
+                        <TableHead className="text-right">Doanh thu</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {salesQuery.data?.topProducts.map((p, i) => (
+                        <TableRow key={i}>
+                          <TableCell>{p.name}</TableCell>
+                          <TableCell className="text-right">{p.quantity}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(p.revenue)}
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
 
-      {/* Inventory tab */}
-      {tab === 'inventory' && (
-        <div className="space-y-6">
-          {inventoryQuery.isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full" />
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <Package className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tổng mặt hàng</p>
-                      <p className="text-xl font-bold">{inventoryQuery.data?.totalItems ?? 0}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                      <AlertTriangle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Sắp hết hàng</p>
-                      <p className="text-xl font-bold text-amber-700">
-                        {inventoryQuery.data?.lowStockItems ?? 0}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Nhập kho gần đây</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(inventoryQuery.data?.recentImports?.length ?? 0) === 0 ? (
-                      <p className="text-sm text-muted-foreground">Chưa có lịch sử</p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Ngày</TableHead>
-                            <TableHead>Hàng hoá</TableHead>
-                            <TableHead className="text-right">SL</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {inventoryQuery.data?.recentImports.map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell>{formatDate(r.date)}</TableCell>
-                              <TableCell>{r.itemName}</TableCell>
-                              <TableCell className="text-right text-emerald-700">+{r.quantity}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Xuất kho gần đây</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(inventoryQuery.data?.recentExports?.length ?? 0) === 0 ? (
-                      <p className="text-sm text-muted-foreground">Chưa có lịch sử</p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Ngày</TableHead>
-                            <TableHead>Hàng hoá</TableHead>
-                            <TableHead className="text-right">SL</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {inventoryQuery.data?.recentExports.map((r, i) => (
-                            <TableRow key={i}>
-                              <TableCell>{formatDate(r.date)}</TableCell>
-                              <TableCell>{r.itemName}</TableCell>
-                              <TableCell className="text-right text-rose-700">-{r.quantity}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          )}
+            {/* Orders by status */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Đơn hàng theo trạng thái</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(salesQuery.data?.ordersByStatus ?? {}).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Không có dữ liệu</p>
+                ) : (
+                  <div className="space-y-2">
+                    {Object.entries(salesQuery.data?.ordersByStatus ?? {}).map(([status, count]) => (
+                      <div key={status} className="flex items-center justify-between">
+                        <span className="text-sm">
+                          {ORDER_STATUS_LABEL[status as keyof typeof ORDER_STATUS_LABEL] ?? status}
+                        </span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
+                          {count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>
