@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  TrendingUp,
   TrendingDown,
   Wallet,
   ShoppingCart,
@@ -30,6 +29,50 @@ import { ORDER_STATUS_LABEL } from '@/helpers/enums/order-status';
 
 type Tab = 'financial' | 'sales' | 'inventory';
 
+// Rút gọn tiền cho nhãn cột: 630500 → "631k", 1250000 → "1.3tr"
+function formatCompact(v: number): string {
+  if (v >= 1_000_000) {
+    const m = v / 1_000_000;
+    return `${m % 1 === 0 ? m : m.toFixed(1)}tr`;
+  }
+  if (v >= 1_000) return `${Math.round(v / 1_000)}k`;
+  return String(v);
+}
+
+function DailyBarChart({ data }: { data: { date: string; amount: number }[] }) {
+  if (data.length === 0) {
+    return <p className="text-sm text-muted-foreground">Chưa có dữ liệu</p>;
+  }
+  const max = Math.max(...data.map((d) => d.amount), 1);
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex items-end gap-2" style={{ height: 180 }}>
+        {data.map((d) => {
+          const day = new Date(d.date);
+          const h = Math.max(2, Math.round((d.amount / max) * 140));
+          return (
+            <div key={d.date} className="flex w-11 shrink-0 flex-col items-center">
+              <span className="mb-1 text-[10px] font-semibold text-foreground">
+                {d.amount > 0 ? formatCompact(d.amount) : ''}
+              </span>
+              <div className="flex flex-1 items-end">
+                <div
+                  className="w-6 rounded-md bg-blue-600"
+                  style={{ height: h }}
+                />
+              </div>
+              <span className="mt-1.5 text-[10px] text-muted-foreground">
+                {day.getDate().toString().padStart(2, '0')}/
+                {(day.getMonth() + 1).toString().padStart(2, '0')}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const [tab, setTab] = useState<Tab>('financial');
   const [from, setFrom] = useState(() => {
@@ -38,6 +81,29 @@ export default function ReportsPage() {
     return d.toISOString().split('T')[0];
   });
   const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+
+  const ymd = (d: Date) => d.toISOString().split('T')[0];
+  function applyPreset(p: 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth') {
+    const now = new Date();
+    let f = new Date(now);
+    let t = new Date(now);
+    if (p === 'today') {
+      f = now;
+    } else if (p === 'yesterday') {
+      f = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      t = f;
+    } else if (p === 'week') {
+      const dow = (now.getDay() + 6) % 7; // Thứ 2 = 0
+      f = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+    } else if (p === 'month') {
+      f = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else {
+      f = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      t = new Date(now.getFullYear(), now.getMonth(), 0);
+    }
+    setFrom(ymd(f));
+    setTo(ymd(t));
+  }
 
   const financialQuery = useQuery({
     queryKey: ['report', 'financial', { from, to }],
@@ -85,6 +151,24 @@ export default function ReportsPage() {
         </div>
         {tab !== 'inventory' && (
           <>
+            {(
+              [
+                { v: 'today', label: 'Hôm nay' },
+                { v: 'yesterday', label: 'Hôm qua' },
+                { v: 'week', label: 'Tuần này' },
+                { v: 'month', label: 'Tháng này' },
+                { v: 'lastMonth', label: 'Tháng trước' },
+              ] as const
+            ).map((p) => (
+              <Button
+                key={p.v}
+                variant="outline"
+                size="sm"
+                onClick={() => applyPreset(p.v)}
+              >
+                {p.label}
+              </Button>
+            ))}
             <Input
               type="date"
               className="w-40"
@@ -98,18 +182,6 @@ export default function ReportsPage() {
               value={to}
               onChange={(e) => setTo(e.target.value)}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const d = new Date();
-                setTo(d.toISOString().split('T')[0]);
-                d.setDate(1);
-                setFrom(d.toISOString().split('T')[0]);
-              }}
-            >
-              Tháng này
-            </Button>
           </>
         )}
       </div>
@@ -125,16 +197,16 @@ export default function ReportsPage() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                   <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                      <TrendingUp className="h-5 w-5" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                      <Wallet className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Doanh thu</p>
-                      <p className="text-xl font-bold text-emerald-700">
-                        {formatCurrency(financialQuery.data?.revenue ?? 0)}
+                      <p className="text-sm text-muted-foreground">Lợi nhuận</p>
+                      <p className="text-xl font-bold text-blue-700">
+                        {formatCurrency(financialQuery.data?.collected ?? 0)}
                       </p>
                     </div>
                   </CardContent>
@@ -148,19 +220,6 @@ export default function ReportsPage() {
                       <p className="text-sm text-muted-foreground">Chi phí</p>
                       <p className="text-xl font-bold text-rose-700">
                         {formatCurrency(financialQuery.data?.expenses ?? 0)}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="flex items-center gap-4 p-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <Wallet className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Lợi nhuận</p>
-                      <p className={`text-xl font-bold ${(financialQuery.data?.profit ?? 0) >= 0 ? 'text-blue-700' : 'text-rose-700'}`}>
-                        {formatCurrency(financialQuery.data?.profit ?? 0)}
                       </p>
                     </div>
                   </CardContent>
@@ -211,34 +270,15 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
-              {/* Daily revenue */}
-              {(financialQuery.data?.dailyRevenue?.length ?? 0) > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Doanh thu theo ngày</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Ngày</TableHead>
-                          <TableHead className="text-right">Doanh thu</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {financialQuery.data?.dailyRevenue.map((d) => (
-                          <TableRow key={d.date}>
-                            <TableCell>{formatDate(d.date)}</TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatCurrency(d.revenue)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Lợi nhuận theo ngày */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Lợi nhuận theo ngày</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DailyBarChart data={financialQuery.data?.dailyCollected ?? []} />
+                </CardContent>
+              </Card>
             </>
           )}
         </div>
