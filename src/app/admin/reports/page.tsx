@@ -80,8 +80,10 @@ export default function ReportsPage() {
     return ymd(d);
   });
   const [to, setTo] = useState(() => ymd(new Date()));
+  const [preset, setPreset] = useState<string>('month'); // mặc định "Tháng này"
 
   function applyPreset(p: 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth') {
+    setPreset(p);
     const now = new Date();
     let f = new Date(now);
     let t = new Date(now);
@@ -125,7 +127,12 @@ export default function ReportsPage() {
             { v: 'lastMonth', label: 'Tháng trước' },
           ] as const
         ).map((p) => (
-          <Button key={p.v} variant="outline" size="sm" onClick={() => applyPreset(p.v)}>
+          <Button
+            key={p.v}
+            variant={preset === p.v ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => applyPreset(p.v)}
+          >
             {p.label}
           </Button>
         ))}
@@ -133,14 +140,20 @@ export default function ReportsPage() {
           type="date"
           className="w-40"
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
+          onChange={(e) => {
+            setFrom(e.target.value);
+            setPreset('custom');
+          }}
         />
         <span className="text-sm text-muted-foreground">—</span>
         <Input
           type="date"
           className="w-40"
           value={to}
-          onChange={(e) => setTo(e.target.value)}
+          onChange={(e) => {
+            setTo(e.target.value);
+            setPreset('custom');
+          }}
         />
       </div>
 
