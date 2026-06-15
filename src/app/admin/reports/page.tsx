@@ -29,6 +29,15 @@ import { ORDER_STATUS_LABEL } from '@/helpers/enums/order-status';
 
 type Tab = 'financial' | 'sales' | 'inventory';
 
+// Định dạng ngày theo GIỜ ĐỊA PHƯƠNG (không dùng toISOString để tránh lệch ngày
+// với máy ở múi giờ +7).
+const pad = (n: number) => String(n).padStart(2, '0');
+const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+// Gửi cho API: from = đầu ngày, to = cuối ngày (theo giờ địa phương) → ISO,
+// nếu không backend lọc lte 00:00 sẽ bỏ sót cả ngày.
+const startIso = (date: string) => new Date(`${date}T00:00:00`).toISOString();
+const endIso = (date: string) => new Date(`${date}T23:59:59.999`).toISOString();
+
 // Rút gọn tiền cho nhãn cột: 630500 → "631k", 1250000 → "1.3tr"
 function formatCompact(v: number): string {
   if (v >= 1_000_000) {
@@ -78,11 +87,10 @@ export default function ReportsPage() {
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(1);
-    return d.toISOString().split('T')[0];
+    return ymd(d);
   });
-  const [to, setTo] = useState(() => new Date().toISOString().split('T')[0]);
+  const [to, setTo] = useState(() => ymd(new Date()));
 
-  const ymd = (d: Date) => d.toISOString().split('T')[0];
   function applyPreset(p: 'today' | 'yesterday' | 'week' | 'month' | 'lastMonth') {
     const now = new Date();
     let f = new Date(now);
@@ -105,15 +113,17 @@ export default function ReportsPage() {
     setTo(ymd(t));
   }
 
+  const range = { from: startIso(from), to: endIso(to) };
+
   const financialQuery = useQuery({
     queryKey: ['report', 'financial', { from, to }],
-    queryFn: () => reportApi.financial({ from, to }),
+    queryFn: () => reportApi.financial(range),
     enabled: tab === 'financial',
   });
 
   const salesQuery = useQuery({
     queryKey: ['report', 'sales', { from, to }],
-    queryFn: () => reportApi.sales({ from, to }),
+    queryFn: () => reportApi.sales(range),
     enabled: tab === 'sales',
   });
 
