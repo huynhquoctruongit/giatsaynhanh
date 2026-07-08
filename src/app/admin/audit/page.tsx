@@ -32,14 +32,12 @@ export default function AuditPage() {
   const [auditMap, setAuditMap] = useState<Map<string, AuditEntry>>(new Map());
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
-  // Tải tất cả đơn còn trên kệ (bỏ DELIVERED + CANCELLED)
+  // Tải tất cả đơn đã giặt xong chờ khách lấy (READY) — bịch trên kệ
   const ordersQuery = useQuery({
     queryKey: ['orders', 'audit-pending'],
     queryFn: async () => {
-      const result = await orderApi.list({ pageSize: 1000 });
-      return result.items.filter(
-        (o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED',
-      );
+      const result = await orderApi.list({ status: 'READY', pageSize: 1000 });
+      return result.items;
     },
   });
 

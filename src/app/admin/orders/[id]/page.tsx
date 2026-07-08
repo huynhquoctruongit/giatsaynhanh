@@ -26,7 +26,7 @@ import {
 
 // ─── Barcode SVG (decorative) ─────────────────────────────────────────────────
 function BarcodeGraphic({ code }: { code: string }) {
-  const bars = [3,1,2,1,3,2,1,2,1,3,1,2,3,1,1,2,3,1,2,1,1,3,2,1,3,2,1,1,2,3,1];
+  const bars = [3, 1, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2, 1, 1, 2, 3, 1];
   let x = 0;
   const rects: { x: number; w: number }[] = [];
   bars.forEach((w, i) => { if (i % 2 === 0) rects.push({ x, w }); x += w; });
@@ -73,7 +73,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   const freeShip = freeShipLine(settings.freeShipThreshold);
 
   const barsHtml = (() => {
-    const bars = [3,1,2,1,3,2,1,2,1,3,1,2,3,1,1,2,3,1,2,1,1,3,2,1,3,2,1,1,2,3,1];
+    const bars = [3, 1, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2, 1, 1, 2, 3, 1];
     let x = 0;
     const rects: string[] = [];
     bars.forEach((w, i) => {
@@ -115,7 +115,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     </tr>` : '');
 
   const date = new Date(order.createdAt);
-  const dateStr = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -147,11 +147,20 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   ${order.fromBooking ? `<div style="text-align:center;padding:6px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
   <div style="padding: 10px 10px 4px; text-align: center;">
     ${settings.invoiceShowLogo && settings.logo ? `<img src="${settings.logo}" style="height:40px;margin-bottom:4px;"/>` : ''}
-    ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base+4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
+    ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base + 4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
     ${settings.invoiceShowPhone && settings.phone ? `<p style="font-weight:600">${settings.phone}</p>` : ''}
     ${settings.invoiceShowAddress && settings.address ? `<p style="font-size:${sm}px;color:#555">Địa chỉ: ${settings.address}</p>` : ''}
     ${settings.invoiceShowWebsite && settings.website ? `<p style="font-size:${sm}px;color:#777">${settings.website}</p>` : ''}
   </div>
+
+  ${settings.invoiceShowQR && qrDataUrl ? `
+  <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
+    <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
+    <p style="font-size:${sm}px;margin-top:2px;font-weight:400"><b style="font-weight:900">${freeShip.lead}</b>${freeShip.rest}</p>
+    <div style="display:flex;justify-content:center;margin-top:8px">
+      <img src="${qrDataUrl}" style="width:150px;height:150px"/>
+    </div>
+  </div>` : ''}
 
   <hr class="divider"/>
 
@@ -198,15 +207,6 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
       <span>Tổng cộng</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
     </div>
   </div>
-
-  ${settings.invoiceShowQR && qrDataUrl ? `
-  <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
-    <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
-    <p style="font-size:${sm}px;margin-top:2px;font-weight:400"><b style="font-weight:900">${freeShip.lead}</b>${freeShip.rest}</p>
-    <div style="display:flex;justify-content:center;margin-top:8px">
-      <img src="${qrDataUrl}" style="width:150px;height:150px"/>
-    </div>
-  </div>` : ''}
 
   <hr class="divider"/>
   <div style="text-align:center;padding:4px 10px 10px;font-size:${sm}px;color:#555">
@@ -260,7 +260,7 @@ function InvoicePreviewPanel({
   const freeShip = freeShipLine(settings.freeShipThreshold);
 
   const date = new Date(order.createdAt);
-  const dateStr = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
   const { subtotal, shippingFee, discount, grandTotal } = calcInvoiceTotals(
     {
@@ -275,144 +275,143 @@ function InvoicePreviewPanel({
 
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: '100%', lineHeight: 1.4 }}>
-        {/* Tag SHIPPING (đơn ship) — trên cùng */}
-        {order.fromBooking && (
-          <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
-            <span style={{ display: 'inline-block', background: '#000', color: '#fff', borderRadius: 999, padding: '3px 18px', fontWeight: 900, letterSpacing: 2, fontSize: base + 2 }}>
-              SHIPPING
-            </span>
-          </div>
+      {/* Tag SHIPPING (đơn ship) — trên cùng */}
+      {order.fromBooking && (
+        <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
+          <span style={{ display: 'inline-block', background: '#000', color: '#fff', borderRadius: 999, padding: '3px 18px', fontWeight: 900, letterSpacing: 2, fontSize: base + 2 }}>
+            SHIPPING
+          </span>
+        </div>
+      )}
+      {/* Header */}
+      <div style={{ paddingBottom: 4, textAlign: 'center' }}>
+        {settings.invoiceShowLogo && settings.logo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={settings.logo} alt="logo" style={{ height: 40, marginBottom: 4 }} />
         )}
-        {/* Header */}
-        <div style={{ paddingBottom: 4, textAlign: 'center' }}>
-            {settings.invoiceShowLogo && settings.logo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={settings.logo} alt="logo" style={{ height: 40, marginBottom: 4 }} />
-            )}
-            {settings.invoiceShowShopName && (
-              <p style={{ fontWeight: 900, fontSize: base + 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {settings.shopName || 'TIỆM GIẶT'}
-              </p>
-            )}
-            {settings.invoiceShowPhone && settings.phone && (
-              <p style={{ fontWeight: 600 }}>{settings.phone}</p>
-            )}
-            {settings.invoiceShowAddress && settings.address && (
-              <p style={{ fontSize: sm, color: '#555' }}>Địa chỉ: {settings.address}</p>
-            )}
+        {settings.invoiceShowShopName && (
+          <p style={{ fontWeight: 900, fontSize: base + 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {settings.shopName || 'TIỆM GIẶT'}
+          </p>
+        )}
+        {settings.invoiceShowPhone && settings.phone && (
+          <p style={{ fontWeight: 600 }}>{settings.phone}</p>
+        )}
+        {settings.invoiceShowAddress && settings.address && (
+          <p style={{ fontSize: sm, color: '#555' }}>Địa chỉ: {settings.address}</p>
+        )}
+      </div>
+
+      {settings.invoiceShowQR && qrDataUrl && (
+        <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
+          <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
+          <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
           </div>
+        </div>
+      )}
 
-          <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
+      <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
-          {/* Invoice info */}
-          <div style={{ padding: '4px 10px', textAlign: 'center' }}>
-            <p style={{ fontWeight: 700 }}>HÓA ĐƠN</p>
-            <p style={{ fontSize: sm, color: '#555' }}>{order.code} · {dateStr}</p>
-            {settings.invoiceShowBarcode && <BarcodeGraphic code={order.code} />}
-          </div>
+      {/* Invoice info */}
+      <div style={{ padding: '4px 10px', textAlign: 'center' }}>
+        <p style={{ fontWeight: 700 }}>HÓA ĐƠN</p>
+        <p style={{ fontSize: sm, color: '#555' }}>{order.code} · {dateStr}</p>
+        {settings.invoiceShowBarcode && <BarcodeGraphic code={order.code} />}
+      </div>
 
-          <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
+      <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
-          {/* Customer */}
-          <div style={{ padding: '4px 10px 6px', textAlign: 'center' }}>
-            <p style={{ fontSize: customerFs, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
-              {order.customer?.name ?? '—'}
-            </p>
-            {order.customer?.phone && (
-              <p style={{ fontSize: sm, color: '#444' }}>SĐT: {order.customer.phone}</p>
+      {/* Customer */}
+      <div style={{ padding: '4px 10px 6px', textAlign: 'center' }}>
+        <p style={{ fontSize: customerFs, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
+          {order.customer?.name ?? '—'}
+        </p>
+        {order.customer?.phone && (
+          <p style={{ fontSize: sm, color: '#444' }}>SĐT: {order.customer.phone}</p>
+        )}
+        {order.customer?.address && (
+          <p style={{ fontSize: sm, color: '#444' }}>ĐC: {order.customer.address}</p>
+        )}
+        {order.note && (
+          <p style={{ fontSize: sm, color: '#444' }}>Ghi chú: {order.note}</p>
+        )}
+      </div>
+
+      {/* Items table */}
+      <div style={{ padding: '0 8px 6px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: sm }}>
+          <thead>
+            <tr style={{ background: '#f5f5f5' }}>
+              <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left' }}>Dịch vụ</th>
+              <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>SL</th>
+              <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
+              <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.items.map((it, i) => (
+              <tr key={i}>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px' }}>{i + 1}. {it.name}</td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  {it.weight ? `${it.quantity} (${it.weight}kg)` : it.quantity}
+                </td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {it.unitPrice.toLocaleString('vi-VN')}
+                </td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {calcLineTotal(it).toLocaleString('vi-VN')}
+                </td>
+              </tr>
+            ))}
+            {/* Đơn booking: thêm dòng phí giao hàng vào bảng items */}
+            {order.fromBooking && shippingFee > 0 && (
+              <tr style={{ background: '#f0fdf4' }}>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', fontWeight: 600, color: '#15803d' }}>🚚 Phí giao hàng</td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center' }}>1</td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, color: '#15803d' }}>
+                  {shippingFee.toLocaleString('vi-VN')}
+                </td>
+                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#15803d' }}>
+                  {shippingFee.toLocaleString('vi-VN')}đ
+                </td>
+              </tr>
             )}
-            {order.customer?.address && (
-              <p style={{ fontSize: sm, color: '#444' }}>ĐC: {order.customer.address}</p>
-            )}
-            {order.note && (
-              <p style={{ fontSize: sm, color: '#444' }}>Ghi chú: {order.note}</p>
-            )}
-          </div>
+          </tbody>
+        </table>
+      </div>
 
-          {/* Items table */}
-          <div style={{ padding: '0 8px 6px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: sm }}>
-              <thead>
-                <tr style={{ background: '#f5f5f5' }}>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'left' }}>Dịch vụ</th>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>SL</th>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Đơn giá</th>
-                  <th style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>Thành tiền</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((it, i) => (
-                  <tr key={i}>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px' }}>{i + 1}. {it.name}</td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      {it.weight ? `${it.quantity} (${it.weight}kg)` : it.quantity}
-                    </td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {it.unitPrice.toLocaleString('vi-VN')}
-                    </td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {calcLineTotal(it).toLocaleString('vi-VN')}
-                    </td>
-                  </tr>
-                ))}
-                {/* Đơn booking: thêm dòng phí giao hàng vào bảng items */}
-                {order.fromBooking && shippingFee > 0 && (
-                  <tr style={{ background: '#f0fdf4' }}>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', fontWeight: 600, color: '#15803d' }}>🚚 Phí giao hàng</td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center' }}>1</td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, color: '#15803d' }}>
-                      {shippingFee.toLocaleString('vi-VN')}
-                    </td>
-                    <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#15803d' }}>
-                      {shippingFee.toLocaleString('vi-VN')}đ
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+      <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
-          <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
-
-          {/* Totals — ship đã trong items, chỉ cần Giảm giá (nếu có) + Tổng cộng */}
-          <div style={{ padding: '2px 10px 4px' }}>
-            {showDiscount && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
-                  <span>Tạm tính</span>
-                  <span>{(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
-                  <span>Giảm giá</span>
-                  <span>- {discount.toLocaleString('vi-VN')}đ</span>
-                </div>
-              </>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base + 1 }}>
-              <span>Tổng cộng</span>
-              <span>{grandTotal.toLocaleString('vi-VN')}đ</span>
+      {/* Totals — ship đã trong items, chỉ cần Giảm giá (nếu có) + Tổng cộng */}
+      <div style={{ padding: '2px 10px 4px' }}>
+        {showDiscount && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+              <span>Tạm tính</span>
+              <span>{(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
             </div>
-          </div>
-
-          {/* QR — CTA nổi bật giống bản in */}
-          {settings.invoiceShowQR && qrDataUrl && (
-            <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
-              <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
-              <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
-              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+              <span>Giảm giá</span>
+              <span>- {discount.toLocaleString('vi-VN')}đ</span>
             </div>
-          )}
+          </>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base + 1 }}>
+          <span>Tổng cộng</span>
+          <span>{grandTotal.toLocaleString('vi-VN')}đ</span>
+        </div>
+      </div>
 
 
-          {/* Footer */}
-          <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
-          <div style={{ textAlign: 'center', padding: '4px 10px 10px', fontSize: sm, color: '#555' }}>
-            {settings.openingHours && <p>Giờ mở cửa: {settings.openingHours}</p>}
-            <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
-          </div>
+      {/* Footer */}
+      <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
+      <div style={{ textAlign: 'center', padding: '4px 10px 10px', fontSize: sm, color: '#555' }}>
+        {settings.openingHours && <p>Giờ mở cửa: {settings.openingHours}</p>}
+        <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
+      </div>
     </div>
   );
 }
