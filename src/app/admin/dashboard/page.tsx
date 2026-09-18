@@ -15,6 +15,7 @@ import {
   Wallet,
   Warehouse,
   BarChart2,
+  Landmark,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { orderApi } from '@/services/api/order.api';
 import { reportApi } from '@/services/api/report.api';
+import { bankApi } from '@/services/api/bank.api';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -38,7 +40,15 @@ export default function DashboardPage() {
     queryFn: () => reportApi.dashboard(),
   });
 
+  // Tiền chuyển khoản hôm nay (GPM Pay) — làm mới mỗi 30s cho gần real-time
+  const bankQuery = useQuery({
+    queryKey: ['bank', 'today'],
+    queryFn: () => bankApi.today(),
+    refetchInterval: 30_000,
+  });
+
   const report = dashboardQuery.data;
+  const transfers = bankQuery.data;
 
   const stats = [
     {
@@ -54,6 +64,13 @@ export default function DashboardPage() {
       isCurrency: true,
       icon: TrendingUp,
       color: 'bg-emerald-50 text-emerald-600',
+    },
+    {
+      label: 'Chuyển khoản hôm nay',
+      value: transfers?.total ?? 0,
+      isCurrency: true,
+      icon: Landmark,
+      color: 'bg-teal-50 text-teal-600',
     },
     {
       label: 'Đơn mới',
@@ -181,6 +198,44 @@ export default function DashboardPage() {
         </Card>
 
         <div className="space-y-4">
+          {/* Chuyển khoản gần đây (GPM Pay) */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base">Chuyển khoản gần đây</CardTitle>
+              <Landmark className="h-4 w-4 text-teal-600" />
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {bankQuery.isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))
+              ) : !transfers || transfers.items.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Chưa có chuyển khoản hôm nay
+                </p>
+              ) : (
+                transfers.items.slice(0, 6).map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-teal-50 px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-xs text-teal-800">
+                        {t.content || t.counterName || t.gateway || 'Chuyển khoản'}
+                      </p>
+                      <p className="text-[11px] text-teal-600/70">
+                        {formatDateTime(t.transactionAt)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold text-teal-700">
+                      +{formatCurrency(t.amount)}
+                    </span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
           {/* Todo list */}
           {report?.todoList && report.todoList.length > 0 && (
             <Card>
