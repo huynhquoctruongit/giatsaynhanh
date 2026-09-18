@@ -144,15 +144,6 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   </style>
 </head>
 <body>
-  ${order.fromBooking ? `<div style="text-align:center;padding:6px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
-  <div style="padding: 10px 10px 4px; text-align: center;">
-    ${settings.invoiceShowLogo && settings.logo ? `<img src="${settings.logo}" style="height:40px;margin-bottom:4px;"/>` : ''}
-    ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base + 4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
-    ${settings.invoiceShowPhone && settings.phone ? `<p style="font-weight:600">${settings.phone}</p>` : ''}
-    ${settings.invoiceShowAddress && settings.address ? `<p style="font-size:${sm}px;color:#555">Địa chỉ: ${settings.address}</p>` : ''}
-    ${settings.invoiceShowWebsite && settings.website ? `<p style="font-size:${sm}px;color:#777">${settings.website}</p>` : ''}
-  </div>
-
   ${settings.invoiceShowQR && qrDataUrl ? `
   <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
     <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
@@ -161,6 +152,15 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
       <img src="${qrDataUrl}" style="width:150px;height:150px"/>
     </div>
   </div>` : ''}
+
+  ${order.fromBooking ? `<div style="text-align:center;padding:6px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
+  <div style="padding: 10px 10px 4px; text-align: center;">
+    ${settings.invoiceShowLogo && settings.logo ? `<img src="${settings.logo}" style="height:40px;margin-bottom:4px;"/>` : ''}
+    ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base + 4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
+    ${settings.invoiceShowPhone && settings.phone ? `<p style="font-weight:600">${settings.phone}</p>` : ''}
+    ${settings.invoiceShowAddress && settings.address ? `<p style="font-size:${sm}px;color:#555">Địa chỉ: ${settings.address}</p>` : ''}
+    ${settings.invoiceShowWebsite && settings.website ? `<p style="font-size:${sm}px;color:#777">${settings.website}</p>` : ''}
+  </div>
 
   <hr class="divider"/>
 
@@ -275,6 +275,17 @@ function InvoicePreviewPanel({
 
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: '100%', lineHeight: 1.4 }}>
+      {settings.invoiceShowQR && qrDataUrl && (
+        <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
+          <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
+          <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
+          </div>
+        </div>
+      )}
+
       {/* Tag SHIPPING (đơn ship) — trên cùng */}
       {order.fromBooking && (
         <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
@@ -301,17 +312,6 @@ function InvoicePreviewPanel({
           <p style={{ fontSize: sm, color: '#555' }}>Địa chỉ: {settings.address}</p>
         )}
       </div>
-
-      {settings.invoiceShowQR && qrDataUrl && (
-        <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
-          <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
-          <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
-          </div>
-        </div>
-      )}
 
       <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
