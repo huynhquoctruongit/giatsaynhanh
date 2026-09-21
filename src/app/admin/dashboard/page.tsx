@@ -45,6 +45,8 @@ export default function DashboardPage() {
     queryKey: ['bank', 'today'],
     queryFn: () => bankApi.today(),
     refetchInterval: 30_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
 
   const report = dashboardQuery.data;
