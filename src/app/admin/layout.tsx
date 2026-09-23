@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/common/app-shell';
+import { GlobalOrderScanner } from '@/components/common/global-order-scanner';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -26,5 +27,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <>
+      <GlobalOrderScanner />
+      <AppShell>{children}</AppShell>
+    </>
+  );
 }
