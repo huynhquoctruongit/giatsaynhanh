@@ -1,8 +1,8 @@
 'use client';
 
-import { use, useRef } from 'react';
+import { Suspense, use, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Download, History, Pencil, Printer, QrCode, Trash2, Truck } from 'lucide-react';
@@ -13,32 +13,27 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { OrderStatusBadge } from '@/components/common/order-status-badge';
 import { PageHeader } from '@/components/common/page-header';
+import { Barcode128, encodeCode128 } from '@/components/common/barcode128';
 import { orderApi } from '@/services/api/order.api';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
 import { calcInvoiceTotals } from '@/lib/invoice-totals';
-import { calcLineTotal, formatCurrency, formatDateTime } from '@/lib/utils';
+import { calcLineTotal, formatCurrency, formatDateTime, orderCodeSuffix } from '@/lib/utils';
 import {
   NEXT_STATUS_TRANSITIONS,
   ORDER_STATUS_LABEL,
   type OrderStatus,
 } from '@/helpers/enums/order-status';
 
-// ─── Barcode SVG (decorative) ─────────────────────────────────────────────────
-function BarcodeGraphic({ code }: { code: string }) {
-  const bars = [3, 1, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2, 1, 1, 2, 3, 1];
-  let x = 0;
-  const rects: { x: number; w: number }[] = [];
-  bars.forEach((w, i) => { if (i % 2 === 0) rects.push({ x, w }); x += w; });
-  const totalW = x;
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <svg viewBox={`0 0 ${totalW} 36`} style={{ width: '100%', maxWidth: 200, height: 36, display: 'block', margin: '0 auto' }}>
-        {rects.map((r, i) => <rect key={i} x={r.x} y={0} width={r.w} height={36} fill="black" />)}
-      </svg>
-      <p style={{ fontSize: 9, color: '#666', marginTop: 2 }}>{code}</p>
-    </div>
-  );
+const PROMO_LINES = ['VỆ SINH GIÀY SẠCH', 'GIẶT TOPPER', 'MỀN DÀY BAO SẠCH VÀ THƠM'];
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatDateStr(iso: string) {
+  const date = new Date(iso);
+  return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 }
 
 // ─── Build receipt HTML for popup printing ───────────────────────────────────
@@ -56,34 +51,28 @@ interface OrderData {
   qr?: { url: string } | null;
 }
 
-/** Dòng freeship — tách "MIỄN PHÍ" (in đậm) khỏi phần sau (in thường) cho nổi bật */
-function freeShipLine(threshold?: number | null): { lead: string; rest: string } {
-  const t = Number(threshold ?? 0);
-  if (t > 0) {
-    const k = t % 1000 === 0 ? `${t / 1000}k` : `${t.toLocaleString('vi-VN')}đ`;
-    return { lead: 'MIỄN PHÍ', rest: ` giao nhận cho đơn hàng trên ${k}` };
-  }
-  return { lead: 'MIỄN PHÍ', rest: ' giao nhận tận nơi' };
+function barcodeSvgHtml(value: string, width = 220, height = 46, quietZone = 8): string {
+  const bits = encodeCode128(value || '');
+  if (!bits) return '';
+  const drawW = Math.max(width - quietZone * 2, 1);
+  const moduleW = drawW / bits.length;
+  const rects = bits
+    .split('')
+    .map((bit, i) =>
+      bit === '1'
+        ? `<rect x="${(quietZone + i * moduleW).toFixed(2)}" y="0" width="${moduleW.toFixed(3)}" height="${height}" fill="#000"/>`
+        : '',
+    )
+    .join('');
+  return `<div style="background:#fff;padding:4px 0;display:flex;justify-content:center">
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${rects}</svg>
+  </div>`;
 }
 
-function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: string): string {
-  const base = settings.invoiceFontSize ?? 13;
-  const customerFs = settings.customerNameFontSize ?? 22;
+function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
+  const base = clamp(settings.invoiceFontSize ?? 15, 12, 26);
+  const nameFont = clamp(settings.customerNameFontSize ?? 22, 16, 34);
   const sm = Math.max(base - 2, 9);
-  const freeShip = freeShipLine(settings.freeShipThreshold);
-
-  const barsHtml = (() => {
-    const bars = [3, 1, 2, 1, 3, 2, 1, 2, 1, 3, 1, 2, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 3, 2, 1, 1, 2, 3, 1];
-    let x = 0;
-    const rects: string[] = [];
-    bars.forEach((w, i) => {
-      if (i % 2 === 0) rects.push(`<rect x="${x}" y="0" width="${w}" height="36" fill="black"/>`);
-      x += w;
-    });
-    return `<svg viewBox="0 0 ${x} 36" style="width:200px;height:36px;display:block;margin:0 auto">
-      ${rects.join('')}
-    </svg><p style="font-size:9px;color:#666;margin:2px 0 0;text-align:center">${order.code}</p>`;
-  })();
 
   const { subtotal, shippingFee, discount, grandTotal } = calcInvoiceTotals(
     {
@@ -94,28 +83,23 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
     settings,
   );
 
-  // Ship đã hiện trong items → totals chỉ cần Giảm giá (nếu có) + Tổng cộng
+  const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
 
-  const itemsHtml = order.items.map((it, idx) => {
-    const lineTotal = calcLineTotal(it);
-    const sl = it.weight ? `${it.quantity} (${it.weight}kg)` : `${it.quantity}`;
-    return `<tr>
+  const itemsHtml = order.items
+    .map((it, idx) => {
+      const lineTotal = calcLineTotal(it);
+      const sl = it.weight ? `${it.quantity} (${it.weight}kg)` : `${it.quantity}`;
+      return `<tr>
       <td style="border:1px solid #bbb;padding:3px 5px">${idx + 1}. ${it.name}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:center;white-space:nowrap">${sl}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap">${it.unitPrice.toLocaleString('vi-VN')}</td>
       <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap">${lineTotal.toLocaleString('vi-VN')}</td>
     </tr>`;
-  }).join('') + (order.fromBooking && shippingFee > 0 ? `
-    <tr style="background:#f0fdf4">
-      <td style="border:1px solid #bbb;padding:3px 5px;font-weight:600;color:#15803d">🚚 Phí giao hàng</td>
-      <td style="border:1px solid #bbb;padding:3px 5px;text-align:center">1</td>
-      <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;white-space:nowrap;font-weight:600;color:#15803d">${shippingFee.toLocaleString('vi-VN')}</td>
-      <td style="border:1px solid #bbb;padding:3px 5px;text-align:right;font-weight:600;color:#15803d">${shippingFee.toLocaleString('vi-VN')}đ</td>
-    </tr>` : '');
+    })
+    .join('');
 
-  const date = new Date(order.createdAt);
-  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const dateStr = formatDateStr(order.createdAt);
 
   return `<!DOCTYPE html>
 <html lang="vi">
@@ -128,12 +112,12 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
       font-size: ${base}px;
       color: #000;
       background: #fff;
-      width: 302px;
+      width: 219px;
       margin: 0 auto;
     }
     @media print {
-      @page { margin: 0; size: 80mm auto; }
-      body { width: 80mm; margin: 0; }
+      @page { margin: 0; size: 58mm auto; }
+      body { width: 58mm; margin: 0; }
     }
     .center { text-align: center; }
     .divider { border: none; border-top: 1px dashed #aaa; margin: 6px 8px; }
@@ -144,22 +128,12 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   </style>
 </head>
 <body>
-  ${settings.invoiceShowQR && qrDataUrl ? `
-  <div style="margin:6px 10px;padding:10px;border:2px solid #000;border-radius:8px;text-align:center">
-    <p style="font-weight:900;font-size:${base + 6}px;letter-spacing:0.5px">GIAO NHẬN ĐỒ TẬN NHÀ</p>
-    <p style="font-size:${sm}px;margin-top:2px;font-weight:400"><b style="font-weight:900">${freeShip.lead}</b>${freeShip.rest}</p>
-    <div style="display:flex;justify-content:center;margin-top:8px">
-      <img src="${qrDataUrl}" style="width:150px;height:150px"/>
-    </div>
-  </div>` : ''}
+  ${order.fromBooking ? `<div style="text-align:center;padding:8px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
 
-  ${order.fromBooking ? `<div style="text-align:center;padding:6px 10px 0"><span style="display:inline-block;background:#000;color:#fff;border-radius:999px;padding:3px 18px;font-weight:900;letter-spacing:2px;font-size:${base + 2}px">SHIPPING</span></div>` : ''}
   <div style="padding: 10px 10px 4px; text-align: center;">
-    ${settings.invoiceShowLogo && settings.logo ? `<img src="${settings.logo}" style="height:40px;margin-bottom:4px;"/>` : ''}
     ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base + 4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
     ${settings.invoiceShowPhone && settings.phone ? `<p style="font-weight:600">${settings.phone}</p>` : ''}
     ${settings.invoiceShowAddress && settings.address ? `<p style="font-size:${sm}px;color:#555">Địa chỉ: ${settings.address}</p>` : ''}
-    ${settings.invoiceShowWebsite && settings.website ? `<p style="font-size:${sm}px;color:#777">${settings.website}</p>` : ''}
   </div>
 
   <hr class="divider"/>
@@ -167,13 +141,13 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <div style="padding: 4px 10px; text-align: center;">
     <p style="font-weight:700">HÓA ĐƠN</p>
     <p style="font-size:${sm}px;color:#555">${order.code} · ${dateStr}</p>
-    ${settings.invoiceShowBarcode ? barsHtml : ''}
+    ${settings.invoiceShowBarcode ? barcodeSvgHtml(orderCodeSuffix(order.code)) : ''}
   </div>
 
   <hr class="divider"/>
 
   <div style="padding: 4px 10px 6px; text-align:center;">
-    <p style="font-size:${customerFs}px;font-weight:900;line-height:1.2;word-break:break-word">${order.customer?.name ?? '—'}</p>
+    <p style="font-size:${nameFont}px;font-weight:900;line-height:1.2;word-break:break-word">${order.customer?.name ?? '—'}</p>
     ${order.customer?.phone ? `<p style="font-size:${sm}px;color:#444">SĐT: ${order.customer.phone}</p>` : ''}
     ${order.customer?.address ? `<p style="font-size:${sm}px;color:#444">ĐC: ${order.customer.address}</p>` : ''}
     ${order.note ? `<p style="font-size:${sm}px;color:#444">Ghi chú: ${order.note}</p>` : ''}
@@ -196,30 +170,40 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings, qrDataUrl?: 
   <hr class="divider"/>
 
   <div style="padding: 2px 10px 4px;">
-    ${showDiscount ? `
+    ${showShipping ? `
     <div class="total-row" style="font-size:${sm}px;color:#555">
-      <span>Tạm tính</span><span>${(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
+      <span>Tạm tính</span><span>${subtotal.toLocaleString('vi-VN')}đ</span>
     </div>
+    <div class="total-row" style="font-size:${sm}px;color:#555">
+      <span>Phí ship</span><span>${shippingFee.toLocaleString('vi-VN')}đ</span>
+    </div>` : ''}
+    ${showDiscount ? `
     <div class="total-row" style="font-size:${sm}px;color:#555">
       <span>Giảm giá</span><span>- ${discount.toLocaleString('vi-VN')}đ</span>
     </div>` : ''}
     <div class="total-row bold" style="font-size:${base + 1}px">
-      <span>Tổng cộng</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
+      <span>TỔNG CỘNG</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
     </div>
   </div>
 
   <hr class="divider"/>
-  <div style="text-align:center;padding:4px 10px 10px;font-size:${sm}px;color:#555">
+  <div style="text-align:center;padding:4px 10px 6px;font-size:${sm}px;color:#555">
     ${settings.openingHours ? `<p>Giờ mở cửa: ${settings.openingHours}</p>` : ''}
     <p style="margin-top:2px;font-weight:700">Cảm ơn quý khách! Hẹn gặp lại.</p>
   </div>
+
+  <div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
+    <p style="font-weight:900;font-size:${base}px;line-height:1.6">${PROMO_LINES.join('<br/>')}</p>
+  </div>
+
+  <div style="height:16px"></div>
 </body>
 </html>`;
 }
 
 // ─── Silent-print via popup ───────────────────────────────────────────────────
 function printReceipt(html: string) {
-  const popup = window.open('', '_blank', 'width=360,height=600,scrollbars=no,toolbar=no,menubar=no');
+  const popup = window.open('', '_blank', 'width=320,height=600,scrollbars=no,toolbar=no,menubar=no');
   if (!popup) {
     toast.error('Popup bị chặn. Hãy cho phép popup cho trang này.');
     return;
@@ -238,29 +222,19 @@ function printReceipt(html: string) {
   popup.document.close();
   popup.focus();
 
-  // onload fires when images (logo/QR) finish loading
+  // onload fires when images finish loading
   popup.onload = doPrint;
   // Fallback for documents with no external resources (load fires synchronously before onload is set)
   setTimeout(doPrint, 600);
 }
 
 // ─── Inline receipt preview (fluid, fills container) ─────────────────────────
-function InvoicePreviewPanel({
-  order,
-  settings,
-  qrDataUrl,
-}: {
-  order: OrderData & { code: string };
-  settings: ShopSettings;
-  qrDataUrl?: string;
-}) {
-  const base = settings.invoiceFontSize ?? 13;
-  const customerFs = settings.customerNameFontSize ?? 22;
+function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: string }; settings: ShopSettings }) {
+  const base = clamp(settings.invoiceFontSize ?? 15, 12, 26);
+  const nameFont = clamp(settings.customerNameFontSize ?? 22, 16, 34);
   const sm = Math.max(base - 2, 9);
-  const freeShip = freeShipLine(settings.freeShipThreshold);
 
-  const date = new Date(order.createdAt);
-  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  const dateStr = formatDateStr(order.createdAt);
 
   const { subtotal, shippingFee, discount, grandTotal } = calcInvoiceTotals(
     {
@@ -270,36 +244,21 @@ function InvoicePreviewPanel({
     },
     settings,
   );
-  // Ship đã hiện trong items → totals chỉ cần Giảm giá (nếu có) + Tổng cộng
+  const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
 
   return (
-    <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: '100%', lineHeight: 1.4 }}>
-      {settings.invoiceShowQR && qrDataUrl && (
-        <div style={{ margin: '6px 10px', padding: 10, border: '2px solid #000', borderRadius: 8, textAlign: 'center' }}>
-          <p style={{ fontWeight: 900, fontSize: base + 6, letterSpacing: 0.5 }}>GIAO NHẬN ĐỒ TẬN NHÀ</p>
-          <p style={{ fontSize: sm, marginTop: 2, fontWeight: 400 }}><strong style={{ fontWeight: 900 }}>{freeShip.lead}</strong>{freeShip.rest}</p>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qrDataUrl} alt="QR" style={{ width: 150, height: 150 }} />
-          </div>
-        </div>
-      )}
-
-      {/* Tag SHIPPING (đơn ship) — trên cùng */}
+    <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: 219, margin: '0 auto', lineHeight: 1.4 }}>
       {order.fromBooking && (
-        <div style={{ textAlign: 'center', paddingTop: 2, paddingBottom: 4 }}>
+        <div style={{ textAlign: 'center', paddingTop: 4, paddingBottom: 4 }}>
           <span style={{ display: 'inline-block', background: '#000', color: '#fff', borderRadius: 999, padding: '3px 18px', fontWeight: 900, letterSpacing: 2, fontSize: base + 2 }}>
             SHIPPING
           </span>
         </div>
       )}
+
       {/* Header */}
       <div style={{ paddingBottom: 4, textAlign: 'center' }}>
-        {settings.invoiceShowLogo && settings.logo && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={settings.logo} alt="logo" style={{ height: 40, marginBottom: 4 }} />
-        )}
         {settings.invoiceShowShopName && (
           <p style={{ fontWeight: 900, fontSize: base + 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {settings.shopName || 'TIỆM GIẶT'}
@@ -319,14 +278,18 @@ function InvoicePreviewPanel({
       <div style={{ padding: '4px 10px', textAlign: 'center' }}>
         <p style={{ fontWeight: 700 }}>HÓA ĐƠN</p>
         <p style={{ fontSize: sm, color: '#555' }}>{order.code} · {dateStr}</p>
-        {settings.invoiceShowBarcode && <BarcodeGraphic code={order.code} />}
+        {settings.invoiceShowBarcode && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+            <Barcode128 value={orderCodeSuffix(order.code)} width={200} height={44} />
+          </div>
+        )}
       </div>
 
       <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
       {/* Customer */}
       <div style={{ padding: '4px 10px 6px', textAlign: 'center' }}>
-        <p style={{ fontSize: customerFs, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
+        <p style={{ fontSize: nameFont, fontWeight: 900, lineHeight: 1.2, wordBreak: 'break-word' }}>
           {order.customer?.name ?? '—'}
         </p>
         {order.customer?.phone && (
@@ -366,64 +329,70 @@ function InvoicePreviewPanel({
                 </td>
               </tr>
             ))}
-            {/* Đơn booking: thêm dòng phí giao hàng vào bảng items */}
-            {order.fromBooking && shippingFee > 0 && (
-              <tr style={{ background: '#f0fdf4' }}>
-                <td style={{ border: '1px solid #bbb', padding: '3px 5px', fontWeight: 600, color: '#15803d' }}>🚚 Phí giao hàng</td>
-                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'center' }}>1</td>
-                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 600, color: '#15803d' }}>
-                  {shippingFee.toLocaleString('vi-VN')}
-                </td>
-                <td style={{ border: '1px solid #bbb', padding: '3px 5px', textAlign: 'right', fontWeight: 600, color: '#15803d' }}>
-                  {shippingFee.toLocaleString('vi-VN')}đ
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
 
       <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
 
-      {/* Totals — ship đã trong items, chỉ cần Giảm giá (nếu có) + Tổng cộng */}
+      {/* Totals */}
       <div style={{ padding: '2px 10px 4px' }}>
-        {showDiscount && (
+        {showShipping && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
               <span>Tạm tính</span>
-              <span>{(subtotal + shippingFee).toLocaleString('vi-VN')}đ</span>
+              <span>{subtotal.toLocaleString('vi-VN')}đ</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
-              <span>Giảm giá</span>
-              <span>- {discount.toLocaleString('vi-VN')}đ</span>
+              <span>Phí ship</span>
+              <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
             </div>
           </>
         )}
+        {showDiscount && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+            <span>Giảm giá</span>
+            <span>- {discount.toLocaleString('vi-VN')}đ</span>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: base + 1 }}>
-          <span>Tổng cộng</span>
+          <span>TỔNG CỘNG</span>
           <span>{grandTotal.toLocaleString('vi-VN')}đ</span>
         </div>
       </div>
 
-
       {/* Footer */}
       <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
-      <div style={{ textAlign: 'center', padding: '4px 10px 10px', fontSize: sm, color: '#555' }}>
+      <div style={{ textAlign: 'center', padding: '4px 10px 6px', fontSize: sm, color: '#555' }}>
         {settings.openingHours && <p>Giờ mở cửa: {settings.openingHours}</p>}
         <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
+      </div>
+
+      {/* Promo banner */}
+      <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
+        <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
+          {PROMO_LINES.map((line, i) => (
+            <span key={line}>
+              {line}
+              {i < PROMO_LINES.length - 1 && <br />}
+            </span>
+          ))}
+        </p>
       </div>
     </div>
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const queryClient = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
   const qrRef = useRef<HTMLDivElement>(null);
+  const autoPrintedRef = useRef(false);
 
   const orderQuery = useQuery({ queryKey: ['order', id], queryFn: () => orderApi.detail(id) });
   const qrQuery = useQuery({ queryKey: ['order', id, 'qr'], queryFn: () => orderApi.qrDataUrl(id), enabled: !!orderQuery.data });
@@ -456,6 +425,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  const order = orderQuery.data;
+  const settings = settingsQuery.data;
+
+  function handlePrint() {
+    if (!order || !settings) { toast.error('Chưa tải được cài đặt hóa đơn'); return; }
+    const html = buildReceiptHtml(order, settings);
+    printReceipt(html);
+  }
+
+  useEffect(() => {
+    if (autoPrintedRef.current) return;
+    if (!order || !settings) return;
+    if (searchParams.get('autoPrint') !== '1') return;
+    autoPrintedRef.current = true;
+    handlePrint();
+    router.replace(`/admin/orders/${id}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order, settings, searchParams]);
+
   if (orderQuery.isLoading) {
     return (
       <div className="space-y-4">
@@ -466,7 +454,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  if (orderQuery.isError || !orderQuery.data) {
+  if (orderQuery.isError || !order) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center">
         <p className="text-sm text-muted-foreground">Không tìm thấy đơn</p>
@@ -477,20 +465,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const order = orderQuery.data;
   // Admin: đổi sang BẤT KỲ trạng thái nào (trừ trạng thái hiện tại).
   // Nhân viên: theo luồng cho phép.
   const allStatuses = Object.keys(ORDER_STATUS_LABEL) as OrderStatus[];
   const statusOptions: OrderStatus[] = isAdmin
     ? allStatuses.filter((s) => s !== order.status)
     : NEXT_STATUS_TRANSITIONS[order.status];
-  const settings = settingsQuery.data;
-
-  function handlePrint() {
-    if (!settings) { toast.error('Chưa tải được cài đặt hóa đơn'); return; }
-    const html = buildReceiptHtml(order, settings, qrQuery.data?.dataUrl);
-    printReceipt(html);
-  }
 
   return (
     <div className="space-y-6">
@@ -696,15 +676,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </CardHeader>
             <CardContent className="p-0">
               {/* Receipt preview */}
-              <div className="border-t bg-white px-3 py-3">
+              <div className="flex justify-center border-t bg-white px-3 py-3">
                 {settingsQuery.isLoading || orderQuery.isLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : settings ? (
-                  <InvoicePreviewPanel
-                    order={order}
-                    settings={settings}
-                    qrDataUrl={qrQuery.data?.dataUrl}
-                  />
+                  <InvoicePreviewPanel order={order} settings={settings} />
                 ) : (
                   <p className="py-8 text-center text-xs text-muted-foreground">Chưa tải được cài đặt</p>
                 )}
@@ -755,5 +731,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense fallback={null}>
+      <OrderDetailContent params={params} />
+    </Suspense>
   );
 }
