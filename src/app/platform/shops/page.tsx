@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, UserPlus } from 'lucide-react';
+import { Plus, UserPlus, Link2, Copy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { EmptyState } from '@/components/common/empty-state';
-import { platformApi, type Shop } from '@/services/api/platform.api';
+import { platformApi, PLATFORM_API_BASE_URL, type Shop } from '@/services/api/platform.api';
 import { extractError } from '@/services/api/client';
 import { formatDate } from '@/lib/utils';
 
@@ -44,6 +44,10 @@ export default function PlatformShopsPage() {
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+
+  const [webhookFormOpen, setWebhookFormOpen] = useState(false);
+  const [webhookTarget, setWebhookTarget] = useState<Shop | undefined>();
+  const [webhookSecretInput, setWebhookSecretInput] = useState('');
 
   const query = useQuery({
     queryKey: ['platform-shops'],
@@ -95,6 +99,38 @@ export default function PlatformShopsPage() {
     setAdminEmail('');
     setAdminPassword('');
     setAdminFormOpen(true);
+  }
+
+  const rotateTokenMutation = useMutation({
+    mutationFn: (shopId: string) => platformApi.rotateWebhookToken(shopId),
+    onSuccess: (result) => {
+      toast.success('Đã tạo link webhook mới');
+      queryClient.invalidateQueries({ queryKey: ['platform-shops'] });
+      setWebhookTarget((prev) => (prev ? { ...prev, webhookToken: result.webhookToken } : prev));
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  const setSecretMutation = useMutation({
+    mutationFn: (shopId: string) => platformApi.setWebhookSecret(shopId, webhookSecretInput),
+    onSuccess: () => {
+      toast.success('Đã lưu secret webhook');
+      queryClient.invalidateQueries({ queryKey: ['platform-shops'] });
+      setWebhookSecretInput('');
+      setWebhookTarget((prev) => (prev ? { ...prev, hasWebhookSecret: true } : prev));
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  function openWebhook(shop: Shop) {
+    setWebhookTarget(shop);
+    setWebhookSecretInput('');
+    setWebhookFormOpen(true);
+  }
+
+  function copyWebhookUrl(token: string) {
+    const url = `${PLATFORM_API_BASE_URL}/webhooks/gpmpay/${token}`;
+    navigator.clipboard.writeText(url).then(() => toast.success('Đã copy link webhook'));
   }
 
   return (
@@ -158,6 +194,14 @@ export default function PlatformShopsPage() {
                       onClick={() => openCreateAdmin(shop)}
                     >
                       <UserPlus className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Webhook GPM Pay"
+                      onClick={() => openWebhook(shop)}
+                    >
+                      <Link2 className="h-4 w-4 text-emerald-600" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -266,6 +310,81 @@ export default function PlatformShopsPage() {
               }
             >
               {createAdminMutation.isPending ? 'Đang lưu…' : 'Lưu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Webhook GPM Pay Dialog */}
+      <Dialog open={webhookFormOpen} onOpenChange={setWebhookFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Webhook GPM Pay — {webhookTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Link webhook</Label>
+              {webhookTarget?.webhookToken ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${PLATFORM_API_BASE_URL}/webhooks/gpmpay/${webhookTarget.webhookToken}`}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    title="Copy link"
+                    onClick={() => copyWebhookUrl(webhookTarget.webhookToken as string)}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Tiệm này chưa có link webhook.</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (
+                    webhookTarget?.webhookToken &&
+                    !window.confirm(
+                      'Tạo lại token sẽ làm link webhook cũ ngừng nhận ngay lập tức. Tiếp tục?',
+                    )
+                  ) {
+                    return;
+                  }
+                  webhookTarget && rotateTokenMutation.mutate(webhookTarget.id);
+                }}
+                disabled={rotateTokenMutation.isPending}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {webhookTarget?.webhookToken ? 'Tạo lại token' : 'Tạo link webhook'}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              <Label>Secret (GPM Pay cấp cho tiệm này)</Label>
+              <Input
+                type="password"
+                value={webhookSecretInput}
+                onChange={(e) => setWebhookSecretInput(e.target.value)}
+                placeholder="Dán secret từ dashboard GPM Pay của tiệm"
+              />
+              <p className="text-xs text-muted-foreground">
+                {webhookTarget?.hasWebhookSecret ? 'Đã cấu hình secret' : 'Chưa có secret'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setWebhookFormOpen(false)}>
+              Đóng
+            </Button>
+            <Button
+              onClick={() => webhookTarget && setSecretMutation.mutate(webhookTarget.id)}
+              disabled={setSecretMutation.isPending || !webhookSecretInput}
+            >
+              {setSecretMutation.isPending ? 'Đang lưu…' : 'Lưu secret'}
             </Button>
           </DialogFooter>
         </DialogContent>

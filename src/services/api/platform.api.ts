@@ -25,6 +25,8 @@ export interface Shop {
   address: string | null;
   isActive: boolean;
   createdAt: string;
+  webhookToken: string | null;
+  hasWebhookSecret: boolean;
   _count: { users: number };
 }
 
@@ -56,4 +58,15 @@ export const platformApi = {
     unwrap<Shop>(platformClient.post('/platform/shops', payload)),
   createShopAdmin: (shopId: string, payload: CreateShopAdminPayload) =>
     unwrap<ShopAdmin>(platformClient.post(`/platform/shops/${shopId}/admins`, payload)),
+  rotateWebhookToken: (shopId: string) =>
+    unwrap<{ webhookToken: string }>(
+      platformClient.post(`/platform/shops/${shopId}/webhook/token`),
+    ),
+  setWebhookSecret: (shopId: string, webhookSecret: string) =>
+    unwrap<{ hasWebhookSecret: boolean }>(
+      platformClient.put(`/platform/shops/${shopId}/webhook/secret`, { webhookSecret }),
+    ),
 };
+
+/** Base URL API dùng để hiển thị link webhook đầy đủ cho từng tiệm. */
+export const PLATFORM_API_BASE_URL = 'https://laundry-qr-backend.onrender.com/api';
