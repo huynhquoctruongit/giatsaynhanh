@@ -308,6 +308,7 @@ export default function SettingsPage() {
   const [invoiceShowQR, setInvoiceShowQR] = useState(true);
   const [invoiceShowDebt, setInvoiceShowDebt] = useState(true);
   const [openingHours, setOpeningHours] = useState('');
+  const [invoiceNote, setInvoiceNote] = useState('');
   const [labelTemplate, setLabelTemplate] = useState('');
   const [labelFontSize, setLabelFontSize] = useState(12);
 
@@ -339,6 +340,7 @@ export default function SettingsPage() {
     setInvoiceShowQR(d.invoiceShowQR ?? true);
     setInvoiceShowDebt(d.invoiceShowDebt ?? true);
     setOpeningHours(d.openingHours ?? '');
+    setInvoiceNote(d.invoiceNote ?? '');
     setLabelTemplate(d.labelTemplate ?? '');
     setLabelFontSize(d.labelFontSize ?? 12);
     setLoyaltyEnabled(d.loyaltyEnabled ?? false);
@@ -371,6 +373,7 @@ export default function SettingsPage() {
       invoiceShowAddress, invoiceShowWebsite, invoiceShowBarcode,
       invoiceShowQR, invoiceShowDebt,
       openingHours: openingHours || null,
+      invoiceNote: invoiceNote || null,
       labelTemplate: labelTemplate || null, labelFontSize,
     } as any);
   }
@@ -492,6 +495,16 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label>Thời gian mở cửa</Label>
                     <Input value={openingHours} onChange={(e) => setOpeningHours(e.target.value)} placeholder="6h30 - 22h00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ghi chú cuối hóa đơn</Label>
+                    <Textarea
+                      rows={3}
+                      value={invoiceNote}
+                      onChange={(e) => setInvoiceNote(e.target.value)}
+                      placeholder={'VỆ SINH GIÀY SẠCH\nGIẶT TOPPER\nMỀN DÀY BAO SẠCH VÀ THƠM'}
+                    />
+                    <p className="text-xs text-muted-foreground">Hiện trong khung viền đen ở cuối hóa đơn. Để trống sẽ không hiện khung này.</p>
                   </div>
                 </CardContent>
               </Card>

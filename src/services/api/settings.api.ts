@@ -20,6 +20,7 @@ export interface ShopSettings {
   invoiceShowQR: boolean;
   invoiceShowDebt: boolean;
   openingHours: string | null;
+  invoiceNote: string | null;
   labelTemplate: string | null;
   labelFontSize: number;
   loyaltyEnabled: boolean;

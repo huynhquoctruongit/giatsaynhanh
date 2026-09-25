@@ -25,8 +25,6 @@ import {
   type OrderStatus,
 } from '@/helpers/enums/order-status';
 
-const PROMO_LINES = ['VỆ SINH GIÀY SẠCH', 'GIẶT TOPPER', 'MỀN DÀY BAO SẠCH VÀ THƠM'];
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -192,9 +190,9 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     <p style="margin-top:2px;font-weight:700">Cảm ơn quý khách! Hẹn gặp lại.</p>
   </div>
 
-  <div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
-    <p style="font-weight:900;font-size:${base}px;line-height:1.6">${PROMO_LINES.join('<br/>')}</p>
-  </div>
+  ${settings.invoiceNote ? `<div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
+    <p style="font-weight:900;font-size:${base}px;line-height:1.6">${settings.invoiceNote.split('\n').join('<br/>')}</p>
+  </div>` : ''}
 
   <div style="height:16px"></div>
 </body>
@@ -368,17 +366,19 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
         <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
       </div>
 
-      {/* Promo banner */}
-      <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
-        <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
-          {PROMO_LINES.map((line, i) => (
-            <span key={line}>
-              {line}
-              {i < PROMO_LINES.length - 1 && <br />}
-            </span>
-          ))}
-        </p>
-      </div>
+      {/* Ghi chú cuối hoá đơn (riêng từng tiệm) */}
+      {settings.invoiceNote && (
+        <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
+          <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
+            {settings.invoiceNote.split('\n').map((line, i, arr) => (
+              <span key={i}>
+                {line}
+                {i < arr.length - 1 && <br />}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
