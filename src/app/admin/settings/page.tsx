@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
@@ -309,6 +310,9 @@ export default function SettingsPage() {
   const [invoiceShowDebt, setInvoiceShowDebt] = useState(true);
   const [openingHours, setOpeningHours] = useState('');
   const [invoiceNote, setInvoiceNote] = useState('');
+  const [bankBin, setBankBin] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankAccountName, setBankAccountName] = useState('');
   const [labelTemplate, setLabelTemplate] = useState('');
   const [labelFontSize, setLabelFontSize] = useState(12);
 
@@ -341,6 +345,9 @@ export default function SettingsPage() {
     setInvoiceShowDebt(d.invoiceShowDebt ?? true);
     setOpeningHours(d.openingHours ?? '');
     setInvoiceNote(d.invoiceNote ?? '');
+    setBankBin(d.bankBin ?? '');
+    setBankAccountNumber(d.bankAccountNumber ?? '');
+    setBankAccountName(d.bankAccountName ?? '');
     setLabelTemplate(d.labelTemplate ?? '');
     setLabelFontSize(d.labelFontSize ?? 12);
     setLoyaltyEnabled(d.loyaltyEnabled ?? false);
@@ -351,6 +358,17 @@ export default function SettingsPage() {
     setFreeShipThreshold(d.freeShipThreshold?.toString() ?? '');
     setAllowNoShiftOrder(d.allowNoShiftOrder ?? true);
   }, [data]);
+
+  const banksQuery = useQuery({
+    queryKey: ['vietqr-banks'],
+    queryFn: async () => {
+      const res = await fetch('https://api.vietqr.io/v2/banks');
+      const json = await res.json();
+      return (json.data ?? []) as { bin: string; name: string; shortName: string; code: string }[];
+    },
+    staleTime: 24 * 60 * 60 * 1000,
+    retry: 1,
+  });
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<ShopSettings>) => settingsApi.update(payload),
@@ -374,6 +392,9 @@ export default function SettingsPage() {
       invoiceShowQR, invoiceShowDebt,
       openingHours: openingHours || null,
       invoiceNote: invoiceNote || null,
+      bankBin: bankBin || null,
+      bankAccountNumber: bankAccountNumber || null,
+      bankAccountName: bankAccountName || null,
       labelTemplate: labelTemplate || null, labelFontSize,
     } as any);
   }
@@ -506,6 +527,40 @@ export default function SettingsPage() {
                     />
                     <p className="text-xs text-muted-foreground">Hiện trong khung viền đen ở cuối hóa đơn. Để trống sẽ không hiện khung này.</p>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Chuyển khoản VietQR</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Ngân hàng</Label>
+                    <Select value={bankBin} onValueChange={setBankBin}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn ngân hàng" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {banksQuery.data?.map((b) => (
+                          <SelectItem key={b.bin} value={b.bin}>{b.shortName} — {b.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {banksQuery.isError && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-destructive">Không tải được danh sách ngân hàng, nhập mã BIN thủ công:</p>
+                        <Input value={bankBin} onChange={(e) => setBankBin(e.target.value)} placeholder="Mã BIN, vd 970436" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Số tài khoản</Label>
+                    <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="0123456789" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tên chủ tài khoản</Label>
+                    <Input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value.toUpperCase())} placeholder="NGUYEN VAN A" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Có đủ ngân hàng + số tài khoản sẽ tự hiện mã QR chuyển khoản đúng số tiền trên hóa đơn. Để trống sẽ không hiện QR.</p>
                 </CardContent>
               </Card>
             </div>

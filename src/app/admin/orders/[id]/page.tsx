@@ -67,6 +67,11 @@ function barcodeSvgHtml(value: string, width = 220, height = 46, quietZone = 8):
   </div>`;
 }
 
+function vietQrUrl(settings: ShopSettings, amount: number, addInfo: string): string {
+  const url = `https://img.vietqr.io/image/${settings.bankBin}-${settings.bankAccountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}`;
+  return settings.bankAccountName ? `${url}&accountName=${encodeURIComponent(settings.bankAccountName)}` : url;
+}
+
 function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
   const base = clamp(settings.invoiceFontSize ?? 15, 12, 26);
   const nameFont = clamp(settings.customerNameFontSize ?? 22, 16, 34);
@@ -183,6 +188,11 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
       <span>TỔNG CỘNG</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
     </div>
   </div>
+
+  ${settings.bankBin && settings.bankAccountNumber ? `<div style="text-align:center;padding:2px 10px 4px">
+    <p style="font-size:${sm}px;font-weight:700;margin-bottom:2px">Quét mã chuyển khoản</p>
+    <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:160px;height:160px;display:block;margin:0 auto" />
+  </div>` : ''}
 
   <hr class="divider"/>
   <div style="text-align:center;padding:4px 10px 6px;font-size:${sm}px;color:#555">
@@ -358,6 +368,19 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
           <span>{grandTotal.toLocaleString('vi-VN')}đ</span>
         </div>
       </div>
+
+      {/* QR chuyển khoản đúng số tiền */}
+      {settings.bankBin && settings.bankAccountNumber && (
+        <div style={{ textAlign: 'center', padding: '2px 10px 4px' }}>
+          <p style={{ fontSize: sm, fontWeight: 700, marginBottom: 2 }}>Quét mã chuyển khoản</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={vietQrUrl(settings, grandTotal, order.code)}
+            alt={`VietQR ${order.code}`}
+            style={{ width: 160, height: 160, display: 'block', margin: '0 auto' }}
+          />
+        </div>
+      )}
 
       {/* Footer */}
       <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
