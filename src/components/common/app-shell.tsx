@@ -21,6 +21,7 @@ import {
   Settings,
   UserCog,
   CalendarClock,
+  HandCoins,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
@@ -39,9 +40,10 @@ const NAV_ITEMS = [
   { href: '/admin/orders', label: 'Đơn hàng', icon: Package },
   { href: '/admin/audit', label: 'Rà soát đơn', icon: PackageSearch },
   { href: '/admin/bookings', label: 'Đặt lịch', icon: CalendarClock },
+  { href: '/admin/order-debts', label: 'Đơn nợ', icon: HandCoins },
   { href: '/admin/customers', label: 'Khách hàng', icon: Users },
   { href: '/admin/suppliers', label: 'Nhà cung cấp', icon: Truck },
-  { href: '/admin/products', label: 'Sản phẩm', icon: ShoppingBag },
+  { href: '/admin/products', label: 'Dịch vụ', icon: ShoppingBag },
   { href: '/admin/inventory', label: 'Kho hàng', icon: Warehouse },
   { href: '/admin/finance', label: 'Thu chi', icon: Wallet },
   { href: '/admin/debts', label: 'Sổ nợ', icon: BookOpen },
