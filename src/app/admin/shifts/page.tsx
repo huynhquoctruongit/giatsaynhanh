@@ -30,6 +30,7 @@ import { shiftApi } from '@/services/api/shift.api';
 import { extractError } from '@/services/api/client';
 import { useAuth } from '@/hooks/use-auth';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { TimesheetMonthly } from './components/timesheet-monthly';
 
 export default function ShiftsPage() {
   const queryClient = useQueryClient();
@@ -121,6 +122,8 @@ export default function ShiftsPage() {
           ) : undefined
         }
       />
+
+      <TimesheetMonthly />
 
       {/* Current shift card */}
       {currentQuery.isLoading ? (
