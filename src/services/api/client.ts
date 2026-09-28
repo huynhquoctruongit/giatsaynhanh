@@ -2,7 +2,7 @@ import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { STORAGE_KEYS } from '@/helpers/constants/storage-keys';
 import type { ApiError, ApiResponse } from '@/types/api';
 
-const baseURL = 'https://laundry-qr-backend.onrender.com/api'
+const baseURL = 'http://localhost:4000/api'
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL,

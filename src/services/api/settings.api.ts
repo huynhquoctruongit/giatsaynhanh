@@ -35,9 +35,10 @@ export interface ShopSettings {
   freeShipThreshold: number | null;
   allowNoShiftOrder: boolean;
   bookingQrEnabled: boolean;
+  bookingQrUrl: string;
 }
 
-export type SettingsPayload = Partial<Omit<ShopSettings, 'id' | 'shopSlug'>>;
+export type SettingsPayload = Partial<Omit<ShopSettings, 'id' | 'shopSlug' | 'bookingQrUrl'>>;
 
 export interface PublicShopInfo {
   shopId: string;

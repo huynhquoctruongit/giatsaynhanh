@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Download, History, Pencil, Printer, QrCode, Trash2, Truck } from 'lucide-react';
+import QRCodeSvg from 'react-qr-code';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,6 +73,11 @@ function vietQrUrl(settings: ShopSettings, amount: number, addInfo: string): str
   return settings.bankAccountName ? `${url}&accountName=${encodeURIComponent(settings.bankAccountName)}` : url;
 }
 
+// Ảnh QR (bitmap) cho URL đặt lịch — dùng cho bản in popup (HTML thuần, không thể mount component React)
+function bookingQrImgUrl(url: string, size: number): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}`;
+}
+
 function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
   const base = clamp(settings.invoiceFontSize ?? 15, 12, 26);
   const nameFont = clamp(settings.customerNameFontSize ?? 22, 16, 34);
@@ -88,6 +94,9 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
 
   const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
+  const hasBankQr = Boolean(settings.bankBin && settings.bankAccountNumber);
+  const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
+  const showBothQr = hasBankQr && hasBookingQr;
 
   const itemsHtml = order.items
     .map((it, idx) => {
@@ -189,10 +198,23 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>
 
-  ${settings.bankBin && settings.bankAccountNumber ? `<div style="text-align:center;padding:2px 10px 4px">
-    <p style="font-size:${sm}px;font-weight:700;margin-bottom:2px">Quét mã chuyển khoản</p>
-    <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:160px;height:160px;display:block;margin:0 auto" />
-  </div>` : ''}
+  ${showBothQr ? `<div style="display:flex;justify-content:center;gap:8px;padding:2px 6px 4px">
+    <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
+      <p style="font-size:${Math.max(sm - 2, 8)}px;font-weight:700;margin-bottom:3px">Chuyển khoản</p>
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:90px;height:90px;display:block" />
+    </div>
+    <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
+      <p style="font-size:${Math.max(sm - 2, 8)}px;font-weight:700;margin-bottom:3px">Đặt lịch giao nhận</p>
+      <img src="${bookingQrImgUrl(settings.bookingQrUrl, 90)}" style="width:90px;height:90px;display:block" />
+    </div>
+  </div>` : `
+    ${hasBankQr ? `<div style="text-align:center;padding:2px 10px 4px">
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:160px;height:160px;display:block;margin:0 auto" />
+    </div>` : ''}
+    ${hasBookingQr ? `<div style="text-align:center;padding:2px 10px 4px">
+      <img src="${bookingQrImgUrl(settings.bookingQrUrl, 160)}" style="width:160px;height:160px;display:block;margin:0 auto" />
+    </div>` : ''}
+  `}
 
   <hr class="divider"/>
   <div style="text-align:center;padding:4px 10px 6px;font-size:${sm}px;color:#555">
@@ -254,6 +276,9 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
   );
   const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
+  const hasBankQr = Boolean(settings.bankBin && settings.bankAccountNumber);
+  const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
+  const showBothQr = hasBankQr && hasBookingQr;
 
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: 219, margin: '0 auto', lineHeight: 1.4 }}>
@@ -369,17 +394,41 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
         </div>
       </div>
 
-      {/* QR chuyển khoản đúng số tiền */}
-      {settings.bankBin && settings.bankAccountNumber && (
-        <div style={{ textAlign: 'center', padding: '2px 10px 4px' }}>
-          <p style={{ fontSize: sm, fontWeight: 700, marginBottom: 2 }}>Quét mã chuyển khoản</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={vietQrUrl(settings, grandTotal, order.code)}
-            alt={`VietQR ${order.code}`}
-            style={{ width: 160, height: 160, display: 'block', margin: '0 auto' }}
-          />
+      {/* QR chuyển khoản + QR đặt lịch — nếu bật cả 2 thì chia 2 ô có khung + nhãn để không nhầm mã */}
+      {showBothQr ? (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '2px 6px 4px' }}>
+          <div style={{ border: '1.5px solid #000', borderRadius: 6, padding: 6, textAlign: 'center' }}>
+            <p style={{ fontSize: Math.max(sm - 2, 8), fontWeight: 700, marginBottom: 3 }}>Chuyển khoản</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={vietQrUrl(settings, grandTotal, order.code)}
+              alt={`VietQR ${order.code}`}
+              style={{ width: 90, height: 90, display: 'block' }}
+            />
+          </div>
+          <div style={{ border: '1.5px solid #000', borderRadius: 6, padding: 6, textAlign: 'center' }}>
+            <p style={{ fontSize: Math.max(sm - 2, 8), fontWeight: 700, marginBottom: 3 }}>Đặt lịch giao nhận</p>
+            <QRCodeSvg value={settings.bookingQrUrl} size={90} />
+          </div>
         </div>
+      ) : (
+        <>
+          {hasBankQr && (
+            <div style={{ textAlign: 'center', padding: '2px 10px 4px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={vietQrUrl(settings, grandTotal, order.code)}
+                alt={`VietQR ${order.code}`}
+                style={{ width: 160, height: 160, display: 'block', margin: '0 auto' }}
+              />
+            </div>
+          )}
+          {hasBookingQr && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '2px 10px 4px' }}>
+              <QRCodeSvg value={settings.bookingQrUrl} size={160} />
+            </div>
+          )}
+        </>
       )}
 
       {/* Footer */}
