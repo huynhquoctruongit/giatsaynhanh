@@ -687,25 +687,32 @@ export default function SettingsPage() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Dịch vụ giao nhận (đặt lịch qua QR)</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Phí giao hàng</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <Toggle checked={deliveryEnabled} onChange={setDeliveryEnabled} label="Bật dịch vụ giao nhận" />
+              <Toggle checked={deliveryEnabled} onChange={setDeliveryEnabled} label="Bật giao hàng" />
+              <p className="-mt-2 text-xs text-muted-foreground">
+                Cho phép nhân viên chọn &quot;có giao hàng&quot; khi tạo đơn thủ công (không liên quan tới đặt lịch qua QR ở trên).
+              </p>
               {deliveryEnabled && (
                 <div className="space-y-2">
                   <Label>Phí giao hàng mặc định (VND)</Label>
                   <Input type="number" value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} placeholder="20000" min={0} />
                 </div>
               )}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Phí ship đơn đặt lịch (VND)</Label>
-                  <Input type="number" value={bookingShippingFee} onChange={(e) => setBookingShippingFee(e.target.value)} placeholder="20000" min={0} />
-                  <p className="text-xs text-muted-foreground">Cộng vào hoá đơn đơn đặt lịch khi dưới ngưỡng freeship.</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Miễn phí ship khi tổng đơn ≥ (VND)</Label>
-                  <Input type="number" value={freeShipThreshold} onChange={(e) => setFreeShipThreshold(e.target.value)} placeholder="80000" min={0} />
-                  <p className="text-xs text-muted-foreground">Để trống = luôn tính phí ship cho đơn đặt lịch.</p>
+
+              <div className="border-t pt-4">
+                <p className="mb-2 text-sm font-medium">Phí ship riêng cho đơn đặt lịch qua QR</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Phí ship đơn đặt lịch (VND)</Label>
+                    <Input type="number" value={bookingShippingFee} onChange={(e) => setBookingShippingFee(e.target.value)} placeholder="20000" min={0} />
+                    <p className="text-xs text-muted-foreground">Cộng vào hoá đơn đơn đặt lịch khi dưới ngưỡng freeship.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Miễn phí ship khi tổng đơn ≥ (VND)</Label>
+                    <Input type="number" value={freeShipThreshold} onChange={(e) => setFreeShipThreshold(e.target.value)} placeholder="80000" min={0} />
+                    <p className="text-xs text-muted-foreground">Để trống = luôn tính phí ship cho đơn đặt lịch.</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
