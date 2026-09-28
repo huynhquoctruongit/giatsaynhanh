@@ -70,7 +70,7 @@ export const platformApi = {
     unwrap<{ hasWebhookSecret: boolean }>(
       platformClient.put(`/platform/shops/${shopId}/webhook/secret`, { webhookSecret }),
     ),
-  activateSubscription: (shopId: string, plan: Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>) =>
+  activateSubscription: (shopId: string, plan: Exclude<SubscriptionPlan, 'LEGACY'>) =>
     unwrap<Shop>(platformClient.patch(`/platform/shops/${shopId}/subscription`, { plan })),
 };
 

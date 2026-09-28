@@ -35,7 +35,7 @@ import {
 import { extractError } from '@/services/api/client';
 import { formatDate } from '@/lib/utils';
 
-type PaidPlan = Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>;
+type ActivatablePlan = Exclude<SubscriptionPlan, 'LEGACY'>;
 
 const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   TRIAL: 'Dùng thử',
@@ -45,7 +45,12 @@ const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   THREE_YEARS: '3 năm',
 };
 
-const PAID_PLANS: PaidPlan[] = ['SIX_MONTHS', 'ONE_YEAR', 'THREE_YEARS'];
+const ACTIVATABLE_PLANS: { plan: ActivatablePlan; hint: string }[] = [
+  { plan: 'TRIAL', hint: '+30 ngày' },
+  { plan: 'SIX_MONTHS', hint: '+6 tháng' },
+  { plan: 'ONE_YEAR', hint: '+1 năm' },
+  { plan: 'THREE_YEARS', hint: '+3 năm' },
+];
 
 function daysUntil(date: string) {
   return Math.ceil((new Date(date).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
@@ -90,7 +95,7 @@ export default function PlatformShopsPage() {
 
   const [planFormOpen, setPlanFormOpen] = useState(false);
   const [planTarget, setPlanTarget] = useState<Shop | undefined>();
-  const [planChoice, setPlanChoice] = useState<PaidPlan>('ONE_YEAR');
+  const [planChoice, setPlanChoice] = useState<ActivatablePlan>('ONE_YEAR');
 
   const query = useQuery({
     queryKey: ['platform-shops'],
@@ -475,8 +480,8 @@ export default function PlatformShopsPage() {
                 hạn còn lại (hoặc tính từ hôm nay nếu đã hết hạn).
               </p>
             )}
-            <div className="grid grid-cols-3 gap-2">
-              {PAID_PLANS.map((plan) => (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {ACTIVATABLE_PLANS.map(({ plan, hint }) => (
                 <button
                   key={plan}
                   type="button"
@@ -488,6 +493,9 @@ export default function PlatformShopsPage() {
                   }`}
                 >
                   {PLAN_LABELS[plan]}
+                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                    {hint}
+                  </span>
                 </button>
               ))}
             </div>
