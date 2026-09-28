@@ -228,13 +228,24 @@ function freeShipLineText(threshold: number): string {
   return 'Miễn phí giao nhận tận nơi';
 }
 
-function DoorQrCard({ shopName, freeShipThreshold }: { shopName: string; freeShipThreshold: number }) {
+function DoorQrCard({
+  shopName,
+  shopSlug,
+  enabled,
+  freeShipThreshold,
+}: {
+  shopName: string;
+  shopSlug: string;
+  enabled: boolean;
+  freeShipThreshold: number;
+}) {
   const [url, setUrl] = useState('');
   const qrRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setUrl(`${window.location.origin}/dat-don`);
-  }, []);
+    if (!shopSlug) return;
+    setUrl(`${window.location.origin}/${shopSlug}/dat-don`);
+  }, [shopSlug]);
 
   function printQr() {
     const svg = qrRef.current?.innerHTML ?? '';
@@ -255,30 +266,39 @@ function DoorQrCard({ shopName, freeShipThreshold }: { shopName: string; freeShi
     <Card>
       <CardHeader><CardTitle>QR đặt đơn tại quầy / cửa</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          In mã này dán ở cửa tiệm. Khách quét → lần đầu nhập SĐT, các lần sau hệ
-          thống tự nhận (lưu trên máy khách) nên đặt đơn cực nhanh.
-        </p>
-        <div className="flex flex-col items-center gap-3">
-          <div ref={qrRef} className="rounded-lg border bg-white p-4">
-            {url ? <QRCode value={url} size={180} /> : null}
-          </div>
-          <code className="break-all text-center text-xs text-muted-foreground">{url}</code>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                navigator.clipboard?.writeText(url);
-                toast.success('Đã copy link');
-              }}
-            >
-              <Copy className="h-4 w-4" /> Copy link
-            </Button>
-            <Button onClick={printQr}>
-              <Printer className="h-4 w-4" /> In mã QR
-            </Button>
-          </div>
-        </div>
+        {!enabled ? (
+          <p className="text-sm text-muted-foreground">
+            Tính năng đang tắt — bật ở tab <span className="font-medium">Tính năng bổ sung</span> để
+            hiện mã QR cho khách quét đặt đơn.
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              In mã này dán ở cửa tiệm. Khách quét → lần đầu nhập SĐT, các lần sau hệ
+              thống tự nhận (lưu trên máy khách) nên đặt đơn cực nhanh.
+            </p>
+            <div className="flex flex-col items-center gap-3">
+              <div ref={qrRef} className="rounded-lg border bg-white p-4">
+                {url ? <QRCode value={url} size={180} /> : null}
+              </div>
+              <code className="break-all text-center text-xs text-muted-foreground">{url}</code>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(url);
+                    toast.success('Đã copy link');
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copy link
+                </Button>
+                <Button onClick={printQr}>
+                  <Printer className="h-4 w-4" /> In mã QR
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -323,6 +343,7 @@ export default function SettingsPage() {
   const [bookingShippingFee, setBookingShippingFee] = useState('');
   const [freeShipThreshold, setFreeShipThreshold] = useState('');
   const [allowNoShiftOrder, setAllowNoShiftOrder] = useState(true);
+  const [bookingQrEnabled, setBookingQrEnabled] = useState(true);
 
   useEffect(() => {
     if (!data) return;
@@ -357,6 +378,7 @@ export default function SettingsPage() {
     setBookingShippingFee(d.bookingShippingFee?.toString() ?? '');
     setFreeShipThreshold(d.freeShipThreshold?.toString() ?? '');
     setAllowNoShiftOrder(d.allowNoShiftOrder ?? true);
+    setBookingQrEnabled(d.bookingQrEnabled ?? true);
   }, [data]);
 
   const banksQuery = useQuery({
@@ -406,6 +428,7 @@ export default function SettingsPage() {
       bookingShippingFee: bookingShippingFee ? Number(bookingShippingFee) : null,
       freeShipThreshold: freeShipThreshold ? Number(freeShipThreshold) : null,
       allowNoShiftOrder,
+      bookingQrEnabled,
     } as any);
   }
 
@@ -477,7 +500,12 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        <DoorQrCard shopName={shopName} freeShipThreshold={freeShipThreshold ? Number(freeShipThreshold) : 0} />
+        <DoorQrCard
+          shopName={shopName}
+          shopSlug={(data as any)?.shopSlug ?? ''}
+          enabled={bookingQrEnabled}
+          freeShipThreshold={freeShipThreshold ? Number(freeShipThreshold) : 0}
+        />
         </div>
       )}
 
@@ -641,6 +669,20 @@ export default function SettingsPage() {
                   <p className="text-xs text-muted-foreground">Ví dụ: 1000 → mỗi 1,000đ tích được 1 điểm</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Đặt lịch qua quét mã QR</CardTitle></CardHeader>
+            <CardContent>
+              <Toggle
+                checked={bookingQrEnabled}
+                onChange={setBookingQrEnabled}
+                label="Bật đặt lịch qua quét mã QR"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Khi tắt, mã QR ở tab &quot;Thông tin tiệm&quot; ngừng hoạt động và khách quét sẽ thấy thông báo tạm khoá.
+              </p>
             </CardContent>
           </Card>
 

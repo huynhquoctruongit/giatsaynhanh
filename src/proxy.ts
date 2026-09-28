@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 // Trang công khai cho khách (không cần đăng nhập):
-//  - '/'        : landing page
-//  - '/dat-don' : đặt giặt
-//  - '/login'   : đăng nhập
-//  - '/q'       : theo dõi đơn qua QR
-const PUBLIC_PREFIXES = ['/login', '/q', '/dat-don'];
+//  - '/'                  : landing page
+//  - '/[shopSlug]/dat-don' : đặt giặt (mỗi tiệm 1 URL riêng theo slug)
+//  - '/login'             : đăng nhập
+//  - '/q'                 : theo dõi đơn qua QR
+const PUBLIC_PREFIXES = ['/login', '/q'];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -17,6 +17,8 @@ export function proxy(req: NextRequest) {
     pathname.startsWith('/favicon') ||
     // file tĩnh (ảnh OG, favicon svg, …) — cho qua để share link & favicon hoạt động
     /\.(jpg|jpeg|png|gif|svg|ico|webp|txt|xml|woff2?)$/i.test(pathname) ||
+    // '/<shopSlug>/dat-don' — slug động theo từng tiệm, không phải prefix cố định
+    /^\/[^/]+\/dat-don$/.test(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (isPublic) {

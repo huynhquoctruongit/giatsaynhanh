@@ -2,6 +2,7 @@ import { apiClient, unwrap } from './client';
 
 export interface ShopSettings {
   id: string;
+  shopSlug: string;
   shopName: string;
   phone: string | null;
   address: string | null;
@@ -33,12 +34,26 @@ export interface ShopSettings {
   bookingShippingFee: number | null;
   freeShipThreshold: number | null;
   allowNoShiftOrder: boolean;
+  bookingQrEnabled: boolean;
 }
 
-export type SettingsPayload = Partial<Omit<ShopSettings, 'id'>>;
+export type SettingsPayload = Partial<Omit<ShopSettings, 'id' | 'shopSlug'>>;
+
+export interface PublicShopInfo {
+  shopId: string;
+  shopSlug: string;
+  shopName: string;
+  phone: string | null;
+  address: string | null;
+  website: string | null;
+  openingHours: string | null;
+  bookingQrEnabled: boolean;
+}
 
 export const settingsApi = {
   get: () => unwrap<ShopSettings>(apiClient.get('/settings')),
   update: (payload: SettingsPayload) =>
     unwrap<ShopSettings>(apiClient.patch('/settings', payload)),
+  getPublic: (shopSlug: string) =>
+    unwrap<PublicShopInfo>(apiClient.get(`/settings/public/${shopSlug}`)),
 };
