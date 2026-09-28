@@ -1,57 +1,34 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   WashingMachine,
   Bike,
   Sparkles,
-  PackageCheck,
   Smartphone,
-  Wind,
-  Shirt,
-  Footprints,
-  Clock,
-  ShieldCheck,
-  Wallet,
   QrCode,
-  Phone,
-  MapPin,
+  Wallet,
+  ShieldCheck,
+  Boxes,
+  Users,
+  LineChart,
+  Printer,
+  Building2,
   ArrowRight,
-  Star,
+  Phone,
+  Mail,
   CheckCircle2,
+  LayoutDashboard,
+  Bell,
 } from 'lucide-react';
-
-/* Thông tin tiệm lấy ĐỘNG từ Cài đặt (GET /settings/public).
- * Có fallback nếu API lỗi/chưa cấu hình → trang vẫn hiển thị bình thường. */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'https://laundry-qr-backend.onrender.com/api';
-
-interface ShopInfo {
-  shopName?: string | null;
-  phone?: string | null;
-  address?: string | null;
-  openingHours?: string | null;
-}
-
-async function getShopInfo(): Promise<ShopInfo | null> {
-  try {
-    const res = await fetch(`${API_BASE}/settings/public`, {
-      next: { revalidate: 300 }, // làm mới mỗi 5 phút (ISR)
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return (json?.data ?? null) as ShopInfo | null;
-  } catch {
-    return null;
-  }
-}
+import { PricingSection } from '@/components/common/pricing-section';
 
 export const metadata: Metadata = {
-  title: 'Giặt Sấy Nhanh — Giặt sấy giao nhận tận nhà ở Thủ Đức',
+  title: 'Giặt Sấy Nhanh — Phần mềm quản lý tiệm giặt ủi',
   description:
-    'Đặt giặt sấy online, shipper lấy và giao tận nhà. Sạch thơm, đúng hẹn, giá theo kg minh bạch. Theo dõi đơn bằng mã QR.',
+    'Giải pháp quản lý tiệm giặt ủi toàn diện: khách đặt lịch qua quét mã QR, nhân viên xử lý đơn trên app, thanh toán VietQR tự động, giao nhận tận nhà.',
 };
+
+const BRAND = 'Giặt Sấy Nhanh';
 
 const BTN_PRIMARY =
   'inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90 hover:shadow-primary/30';
@@ -59,35 +36,47 @@ const BTN_GHOST =
   'inline-flex h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-7 text-base font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50';
 
 const STEPS = [
-  { icon: Smartphone, title: 'Đặt lịch online', desc: 'Nhập số điện thoại & địa chỉ, chọn giờ lấy đồ. 30 giây là xong.' },
-  { icon: Bike, title: 'Lấy đồ tận nơi', desc: 'Shipper đến tận nhà nhận đồ — bạn không cần ra khỏi cửa.' },
-  { icon: WashingMachine, title: 'Giặt sấy sạch thơm', desc: 'Giặt riêng từng khách, sấy khô, gấp gọn gàng, thơm lâu.' },
-  { icon: PackageCheck, title: 'Giao lại đúng hẹn', desc: 'Đồ sạch được giao về tận nhà đúng khung giờ bạn chọn.' },
-];
-
-const SERVICES = [
-  { icon: WashingMachine, title: 'Giặt sấy theo kg', desc: 'Quần áo hằng ngày — giặt, sấy, gấp. Tính theo cân, minh bạch.' },
-  { icon: Shirt, title: 'Giặt hấp - ủi', desc: 'Áo sơ mi, áo dài, vest… phẳng phiu, sắc nét cho ngày quan trọng.' },
-  { icon: Wind, title: 'Giặt khô', desc: 'Đồ cao cấp, chất liệu nhạy cảm được xử lý đúng cách, an toàn.' },
-  { icon: Footprints, title: 'Giặt giày - chăn mền', desc: 'Đồ cồng kềnh, giày dép, chăn ga gối — sạch sâu, khô nhanh.' },
+  {
+    icon: QrCode,
+    title: 'Khách quét mã QR',
+    desc: 'Khách quét mã dán tại cửa tiệm (hoặc trên hoá đơn) để tự đặt lịch giao nhận, không cần cài app.',
+  },
+  {
+    icon: Smartphone,
+    title: 'Nhân viên xử lý trên app',
+    desc: 'Đơn mới báo về app ngay lập tức — nhân viên nhận, cập nhật trạng thái, in tem nhãn tại chỗ.',
+  },
+  {
+    icon: Wallet,
+    title: 'Thanh toán VietQR tự động',
+    desc: 'Hoá đơn tự tạo mã QR chuyển khoản đúng số tiền — khách quét là chuyển, không cần nhập tay.',
+  },
+  {
+    icon: Bike,
+    title: 'Giao nhận tận nhà',
+    desc: 'Theo dõi đơn xuyên suốt tới khi giao lại tận cửa — khách xem được trạng thái mọi lúc.',
+  },
 ];
 
 const FEATURES = [
-  { icon: Clock, title: 'Đúng hẹn', desc: 'Lấy và giao theo khung giờ bạn chọn, không để bạn chờ.' },
-  { icon: Wallet, title: 'Giá minh bạch', desc: 'Tính theo kg rõ ràng, báo giá trước, không phụ phí ẩn.' },
-  { icon: QrCode, title: 'Theo dõi bằng QR', desc: 'Mỗi đơn một mã QR — quét là biết tình trạng đồ của bạn.' },
-  { icon: ShieldCheck, title: 'Giặt riêng từng khách', desc: 'Đồ của bạn giặt riêng, không lẫn — sạch và an tâm.' },
+  { icon: QrCode, title: 'Đặt lịch qua quét mã QR', desc: 'Mỗi tiệm một mã QR riêng, bật/tắt được — khách tự đặt lịch giao nhận không cần gọi điện.' },
+  { icon: Printer, title: 'In hoá đơn & tem nhãn', desc: 'Kết nối máy in Bluetooth/Wifi/Sunmi, in hoá đơn và tem nhãn ngay khi nhận đồ.' },
+  { icon: Wallet, title: 'Thanh toán VietQR', desc: 'Sinh mã QR chuyển khoản đúng số tiền từng đơn, đối soát nhanh, không nhầm lẫn.' },
+  { icon: Boxes, title: 'Quản lý kho & thu chi', desc: 'Theo dõi nguyên vật liệu, chi phí vận hành, công nợ khách hàng — nhàng minh bạch.' },
+  { icon: Users, title: 'Quản lý nhân viên & ca làm', desc: 'Phân quyền theo vai trò, chấm công theo ca, kiểm soát ai tạo/sửa đơn nào.' },
+  { icon: LineChart, title: 'Báo cáo & thống kê', desc: 'Doanh thu, đơn hàng, hiệu suất nhân viên theo ngày/tháng — ra quyết định nhanh hơn.' },
+  { icon: ShieldCheck, title: 'Tích điểm khách hàng', desc: 'Giữ chân khách quen bằng chương trình tích điểm cấu hình theo từng tiệm.' },
+  { icon: Building2, title: 'Quản lý đa chi nhánh', desc: 'Chuỗi nhiều tiệm dùng chung một tài khoản, tách biệt dữ liệu từng chi nhánh.' },
 ];
 
-export default async function LandingPage() {
-  const shop = await getShopInfo();
-  const BRAND = shop?.shopName?.trim() || 'Giặt Sấy Nhanh';
-  const PHONE = shop?.phone?.trim() || '';
-  const ADDRESS = shop?.address?.trim() || 'Thủ Đức, TP. Hồ Chí Minh';
-  const HOURS = shop?.openingHours?.trim() || '7:00 – 21:00 mỗi ngày';
-  const hasPhone = PHONE.length > 0;
-  const telHref = `tel:${PHONE.replace(/\s/g, '')}`;
+const WHY = [
+  { title: 'Chuyên nghiệp hoá dịch vụ', desc: 'Khách tự đặt lịch, tự theo dõi đơn qua QR — trải nghiệm như thương hiệu lớn.' },
+  { title: 'Minh bạch dòng tiền', desc: 'Thu chi, công nợ, thanh toán VietQR đều có sổ sách rõ ràng, đối soát tức thì.' },
+  { title: 'Tiết kiệm thời gian vận hành', desc: 'Bớt ghi chép tay, bớt sai sót — nhân viên chỉ cần thao tác trên app.' },
+  { title: 'Dễ dùng, hỗ trợ nhanh', desc: 'Giao diện tối giản, không cần rành công nghệ; đội ngũ hỗ trợ đồng hành khi triển khai.' },
+];
 
+export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* ───────── Header ───────── */}
@@ -101,26 +90,26 @@ export default async function LandingPage() {
           </Link>
 
           <nav className="hidden items-center gap-8 text-sm font-medium text-slate-600 md:flex">
+            <a href="#features" className="transition hover:text-slate-900">Tính năng</a>
             <a href="#how" className="transition hover:text-slate-900">Cách hoạt động</a>
-            <a href="#services" className="transition hover:text-slate-900">Dịch vụ</a>
-            <a href="#why" className="transition hover:text-slate-900">Vì sao chọn</a>
+            <a href="#pricing" className="transition hover:text-slate-900">Bảng giá</a>
             <a href="#contact" className="transition hover:text-slate-900">Liên hệ</a>
           </nav>
 
           <div className="flex items-center gap-2">
             <Link
-              href="/admin"
+              href="/login"
               className="hidden rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900 sm:inline-flex"
             >
               Đăng nhập
             </Link>
-            <Link
-              href="/dat-don"
+            <a
+              href="#pricing"
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
             >
-              Đặt giặt
+              Dùng thử miễn phí
               <ArrowRight className="h-4 w-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -132,91 +121,118 @@ export default async function LandingPage() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-semibold text-primary">
               <Sparkles className="h-4 w-4" />
-              Giặt sấy · Giao nhận tận nhà
+              Phần mềm quản lý tiệm giặt ủi
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight md:text-6xl">
-              Giặt sấy giao tận nhà,
+              Quét mã đặt lịch,
               <br />
-              <span className="text-primary">sạch thơm – đúng hẹn</span>
+              <span className="text-primary">quản lý bằng app, giao tận nhà</span>
             </h1>
             <p className="mt-5 max-w-md text-lg text-slate-600">
-              Bạn không cần ra khỏi nhà. Đặt lịch, shipper lấy đồ, giặt sấy gấp gọn
-              rồi giao lại tận cửa. Tính tiền theo kg minh bạch.
+              Giải pháp trọn gói cho tiệm giặt ủi: khách tự đặt lịch qua QR, nhân
+              viên xử lý đơn trên app, thanh toán VietQR tự động — mọi thứ đồng bộ
+              theo thời gian thực.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/dat-don" className={BTN_PRIMARY}>
-                Đặt giặt ngay
+              <a href="#pricing" className={BTN_PRIMARY}>
+                Dùng thử miễn phí
                 <ArrowRight className="h-5 w-5" />
-              </Link>
-              {hasPhone ? (
-                <a href={telHref} className={BTN_GHOST}>
-                  <Phone className="h-5 w-5" />
-                  Gọi đặt: {PHONE}
-                </a>
-              ) : (
-                <a href="#services" className={BTN_GHOST}>
-                  Xem dịch vụ
-                </a>
-              )}
+              </a>
+              <a href="#features" className={BTN_GHOST}>
+                Xem tính năng
+              </a>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-500">
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" /> Lấy & giao tận nơi
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Đặt lịch qua QR
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" /> Giao trong ngày
+                <CheckCircle2 className="h-4 w-4 text-primary" /> App cho nhân viên
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-primary" /> Không cần đăng nhập
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Thanh toán VietQR
               </span>
             </div>
           </div>
 
-          {/* Ảnh tiệm + thẻ nổi */}
-          <div className="relative mx-auto w-full max-w-sm">
-            <div className="relative aspect-[3/4] overflow-hidden rounded-[2rem] shadow-2xl ring-1 ring-slate-900/5">
-              <Image
-                src="/og-cover.jpg"
-                alt={`Tiệm ${BRAND}`}
-                fill
-                priority
-                sizes="(max-width: 768px) 90vw, 420px"
-                className="object-cover"
-              />
-            </div>
-            <div className="absolute -left-4 top-8 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-900/5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Bike className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm font-bold leading-none">Giao trong ngày</p>
-                <p className="mt-1 text-xs text-slate-500">Tận nhà bạn</p>
+          {/* Mockup minh hoạ app — không phải ảnh chụp thật */}
+          <div className="relative mx-auto w-full max-w-sm py-6">
+            <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl ring-1 ring-slate-900/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <LayoutDashboard className="h-4 w-4" />
+                  </span>
+                  <span className="text-sm font-bold">Tổng quan hôm nay</span>
+                </div>
+                <Bell className="h-4 w-4 text-slate-400" />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Doanh thu</p>
+                  <p className="mt-1 text-lg font-extrabold text-slate-900">1.237.400đ</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 p-3">
+                  <p className="text-xs text-slate-500">Đơn mới</p>
+                  <p className="mt-1 text-lg font-extrabold text-primary">12</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                {[
+                  { code: 'LD-20260928-L88GR', status: 'Sẵn sàng giao' },
+                  { code: 'LD-20260928-RQZN3', status: 'Đang giặt' },
+                ].map((o) => (
+                  <div key={o.code} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2 text-xs">
+                    <span className="font-mono text-slate-500">{o.code}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold text-primary">{o.status}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-900 p-3 text-white">
+                <QrCode className="h-8 w-8" />
+                <div>
+                  <p className="text-xs font-semibold">QR đặt lịch tại cửa</p>
+                  <p className="text-[11px] text-white/60">Khách quét → tự đặt đơn</p>
+                </div>
               </div>
             </div>
-            <div className="absolute -right-3 bottom-10 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-900/5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-500">
-                <Star className="h-5 w-5 fill-amber-400" />
+
+            <div className="absolute -left-6 -top-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-900/5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Smartphone className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-bold leading-none">Sạch thơm</p>
-                <p className="mt-1 text-xs text-slate-500">Gấp gọn gàng</p>
+                <p className="text-sm font-bold leading-none">Quản lý trên app</p>
+                <p className="mt-1 text-xs text-slate-500">Mọi lúc, mọi nơi</p>
+              </div>
+            </div>
+            <div className="absolute -right-6 -bottom-2 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 shadow-xl ring-1 ring-slate-900/5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-500">
+                <Wallet className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold leading-none">VietQR tự động</p>
+                <p className="mt-1 text-xs text-slate-500">Đúng số tiền</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ───────── Stats strip ───────── */}
+      {/* ───────── Trust strip ───────── */}
       <section className="border-y border-slate-100 bg-slate-50/60">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 py-8 md:grid-cols-4">
           {[
-            { value: '500+', label: 'Khách hàng tin dùng' },
-            { value: 'Trong ngày', label: 'Giao nhận nhanh' },
-            { value: 'Theo kg', label: 'Giá minh bạch' },
-            { value: 'Thủ Đức', label: 'Phục vụ khu vực' },
+            { value: 'Đa chi nhánh', label: 'Quản lý nhiều tiệm' },
+            { value: 'Thời gian thực', label: 'Đồng bộ tức thì' },
+            { value: 'Không giới hạn', label: 'Số lượng đơn hàng' },
+            { value: 'Android POS', label: 'Sẵn sàng máy in nhiệt' },
           ].map((s) => (
             <div key={s.label} className="text-center">
-              <p className="text-2xl font-extrabold text-primary md:text-3xl">{s.value}</p>
+              <p className="text-xl font-extrabold text-primary md:text-2xl">{s.value}</p>
               <p className="mt-1 text-sm text-slate-500">{s.label}</p>
             </div>
           ))}
@@ -226,8 +242,8 @@ export default async function LandingPage() {
       {/* ───────── How it works ───────── */}
       <section id="how" className="mx-auto max-w-6xl px-5 py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Giặt đồ chỉ với 4 bước</h2>
-          <p className="mt-3 text-slate-600">Đơn giản, nhanh gọn — bạn chỉ việc chờ đồ sạch về tới cửa.</p>
+          <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Vận hành chỉ với 4 bước</h2>
+          <p className="mt-3 text-slate-600">Từ lúc khách đặt lịch tới khi giao lại tận nhà — tất cả đồng bộ trên một hệ thống.</p>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step, i) => {
@@ -246,23 +262,23 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Services ───────── */}
-      <section id="services" className="bg-slate-50/60 py-20">
+      {/* ───────── Features ───────── */}
+      <section id="features" className="bg-slate-50/60 py-20">
         <div className="mx-auto max-w-6xl px-5">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Dịch vụ của tiệm</h2>
-            <p className="mt-3 text-slate-600">Từ quần áo hằng ngày đến đồ cần chăm sóc đặc biệt.</p>
+            <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Tính năng đầy đủ cho một tiệm giặt ủi</h2>
+            <p className="mt-3 text-slate-600">Từ đặt lịch, xử lý đơn tới thu chi và báo cáo — không cần thêm công cụ rời rạc.</p>
           </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {SERVICES.map((sv) => {
-              const Icon = sv.icon;
+            {FEATURES.map((f) => {
+              const Icon = f.icon;
               return (
-                <div key={sv.title} className="group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-lg">
+                <div key={f.title} className="group rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-lg">
                   <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                     <Icon className="h-6 w-6" />
                   </span>
-                  <h3 className="mt-4 text-lg font-bold">{sv.title}</h3>
-                  <p className="mt-2 text-sm text-slate-600">{sv.desc}</p>
+                  <h3 className="mt-4 text-base font-bold">{f.title}</h3>
+                  <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
                 </div>
               );
             })}
@@ -270,27 +286,27 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ───────── Pricing ───────── */}
+      <PricingSection />
+
       {/* ───────── Why us ───────── */}
       <section id="why" className="mx-auto max-w-6xl px-5 py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Vì sao chọn {BRAND}?</h2>
-          <p className="mt-3 text-slate-600">Tiện lợi, minh bạch và đáng tin — để bạn yên tâm giao đồ.</p>
+          <h2 className="text-3xl font-extrabold tracking-tight md:text-4xl">Vì sao chủ tiệm chọn {BRAND}?</h2>
+          <p className="mt-3 text-slate-600">Xây riêng cho ngành giặt ủi — không phải phần mềm bán hàng lắp ghép chung chung.</p>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((f) => {
-            const Icon = f.icon;
-            return (
-              <div key={f.title} className="flex gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <div>
-                  <h3 className="font-bold">{f.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{f.desc}</p>
-                </div>
+          {WHY.map((f) => (
+            <div key={f.title} className="flex gap-4">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="font-bold">{f.title}</h3>
+                <p className="mt-1 text-sm text-slate-600">{f.desc}</p>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </section>
 
@@ -300,28 +316,25 @@ export default async function LandingPage() {
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-12 -left-8 h-44 w-44 rounded-full bg-white/10" />
           <h2 className="relative text-3xl font-extrabold tracking-tight md:text-4xl">
-            Sẵn sàng giặt sấy mà không cần ra khỏi nhà?
+            Sẵn sàng số hoá tiệm giặt ủi của bạn?
           </h2>
           <p className="relative mx-auto mt-3 max-w-xl text-primary-foreground/90">
-            Đặt lịch trong 30 giây — shipper sẽ tới lấy đồ và giao lại sạch thơm tận cửa.
+            Chuyển từ sổ sách viết tay sang hệ thống quản lý hiện đại — khách tự đặt lịch, đội ngũ xử lý trên app.
           </p>
           <div className="relative mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link
-              href="/dat-don"
+            <a
+              href="#pricing"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-base font-semibold text-primary shadow-lg transition hover:bg-white/90"
             >
-              Đặt giặt ngay
+              Xem bảng giá
               <ArrowRight className="h-5 w-5" />
-            </Link>
-            {hasPhone && (
-              <a
-                href={telHref}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/40 px-7 text-base font-semibold text-white transition hover:bg-white/10"
-              >
-                <Phone className="h-5 w-5" />
-                {PHONE}
-              </a>
-            )}
+            </a>
+            <a
+              href="#contact"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/40 px-7 text-base font-semibold text-white transition hover:bg-white/10"
+            >
+              Liên hệ tư vấn
+            </a>
           </div>
         </div>
       </section>
@@ -337,25 +350,21 @@ export default async function LandingPage() {
               <span className="text-lg font-extrabold tracking-tight">{BRAND}</span>
             </div>
             <p className="mt-4 max-w-xs text-sm text-slate-600">
-              Tiệm {BRAND} — chất lượng <strong className="font-bold text-slate-900">NHÌ</strong> Thủ Đức,
-              còn ở đâu <strong className="font-bold text-slate-900">NHẤT</strong> thì sốp hông biết 😄
+              Phần mềm quản lý tiệm giặt ủi: đặt lịch qua quét mã QR, xử lý đơn trên
+              app, thanh toán VietQR tự động, giao nhận tận nhà.
             </p>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-400">Liên hệ</h4>
+            <h4 className="text-sm font-bold uppercase tracking-wide text-slate-400">Liên hệ tư vấn</h4>
             <ul className="mt-4 space-y-3 text-sm text-slate-600">
-              {hasPhone && (
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-primary" />
-                  <a href={telHref} className="hover:text-slate-900">{PHONE}</a>
-                </li>
-              )}
               <li className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-primary" /> {ADDRESS}
+                <Phone className="h-4 w-4 text-primary" />
+                <span className="text-slate-400">(Cập nhật số điện thoại/Zalo)</span>
               </li>
               <li className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" /> {HOURS}
+                <Mail className="h-4 w-4 text-primary" />
+                <span className="text-slate-400">(Cập nhật email liên hệ)</span>
               </li>
             </ul>
           </div>
@@ -364,19 +373,19 @@ export default async function LandingPage() {
             <h4 className="text-sm font-bold uppercase tracking-wide text-slate-400">Bắt đầu</h4>
             <ul className="mt-4 space-y-3 text-sm text-slate-600">
               <li>
-                <Link href="/dat-don" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
-                  Đặt giặt ngay <ArrowRight className="h-4 w-4" />
-                </Link>
+                <a href="#pricing" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
+                  Xem bảng giá <ArrowRight className="h-4 w-4" />
+                </a>
               </li>
               <li><a href="#how" className="hover:text-slate-900">Cách hoạt động</a></li>
-              <li><a href="#services" className="hover:text-slate-900">Dịch vụ</a></li>
-              <li><Link href="/admin" className="hover:text-slate-900">Đăng nhập quản lý</Link></li>
+              <li><a href="#features" className="hover:text-slate-900">Tính năng</a></li>
+              <li><Link href="/login" className="hover:text-slate-900">Đăng nhập quản lý</Link></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-slate-100">
           <div className="mx-auto max-w-6xl px-5 py-5 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} {BRAND}. Giặt sấy giao nhận tận nhà tại {ADDRESS}.
+            © {new Date().getFullYear()} {BRAND}. Phần mềm quản lý tiệm giặt ủi.
           </div>
         </div>
       </footer>
