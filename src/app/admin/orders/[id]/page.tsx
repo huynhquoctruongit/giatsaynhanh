@@ -94,7 +94,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
 
   const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
-  const hasBankQr = Boolean(settings.bankBin && settings.bankAccountNumber);
+  const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
 
@@ -276,7 +276,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
   );
   const showShipping = shippingFee > 0;
   const showDiscount = settings.invoiceShowDebt && discount > 0;
-  const hasBankQr = Boolean(settings.bankBin && settings.bankAccountNumber);
+  const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
 

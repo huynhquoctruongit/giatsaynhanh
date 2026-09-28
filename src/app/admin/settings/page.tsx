@@ -77,11 +77,15 @@ interface PreviewProps {
   showLogo: boolean; showShopName: boolean; showPhone: boolean;
   showAddress: boolean; showWebsite: boolean; showBarcode: boolean;
   showQr: boolean; showDebt: boolean; openingHours: string;
+  bookingQrEnabled: boolean;
 }
 
 function ReceiptPreview(p: PreviewProps) {
   const base = p.fontSize;
   const sm = Math.max(base - 2, 9);
+  const hasBankQr = p.showQr;
+  const hasBookingQr = p.bookingQrEnabled;
+  const showBothQr = hasBankQr && hasBookingQr;
 
   return (
     /* 80mm paper: ~302px at 96dpi */
@@ -177,14 +181,28 @@ function ReceiptPreview(p: PreviewProps) {
         )}
       </div>
 
-      {/* ── QR ── */}
-      {p.showQr && (
-        <div className="flex flex-col items-center py-2 gap-1">
-          <div className="h-16 w-16 border border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-400 rounded">
-            QR
+      {/* ── QR chuyển khoản + QR đặt lịch — giống hệt logic bill thật ── */}
+      {showBothQr ? (
+        <div className="flex justify-center gap-2 py-2">
+          <div className="flex flex-col items-center gap-1 rounded border-2 border-black px-2 py-1.5">
+            <p style={{ fontSize: Math.max(sm - 2, 8) }} className="font-bold">Chuyển khoản</p>
+            <div className="h-11 w-11 border border-gray-300 bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 rounded">QR</div>
           </div>
-          <p style={{ fontSize: sm }} className="text-gray-400">Quét để xem đơn hàng</p>
+          <div className="flex flex-col items-center gap-1 rounded border-2 border-black px-2 py-1.5">
+            <p style={{ fontSize: Math.max(sm - 2, 8) }} className="font-bold">Đặt lịch giao nhận</p>
+            <div className="h-11 w-11 border border-gray-300 bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 rounded">QR</div>
+          </div>
         </div>
+      ) : (
+        <>
+          {(hasBankQr || hasBookingQr) && (
+            <div className="flex flex-col items-center py-2 gap-1">
+              <div className="h-16 w-16 border border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-400 rounded">
+                QR
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Footer ── */}
@@ -533,7 +551,6 @@ export default function SettingsPage() {
                   <Toggle checked={invoiceShowAddress} onChange={setInvoiceShowAddress} label="Hiện địa chỉ" />
                   <Toggle checked={invoiceShowWebsite} onChange={setInvoiceShowWebsite} label="Hiện website" />
                   <Toggle checked={invoiceShowBarcode} onChange={setInvoiceShowBarcode} label="Hiện mã vạch (barcode)" />
-                  <Toggle checked={invoiceShowQR} onChange={setInvoiceShowQR} label="Hiện QR code trên hoá đơn in" />
                   <Toggle checked={invoiceShowDebt} onChange={setInvoiceShowDebt} label="Hiện nợ cũ & còn phải thu" />
                 </CardContent>
               </Card>
@@ -588,6 +605,12 @@ export default function SettingsPage() {
                     <Label>Tên chủ tài khoản</Label>
                     <Input value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value.toUpperCase())} placeholder="NGUYEN VAN A" />
                   </div>
+                  <div className="border-t pt-3">
+                    <Toggle checked={invoiceShowQR} onChange={setInvoiceShowQR} label="Hiện mã QR chuyển khoản trên hoá đơn" />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Tắt để tạm ẩn QR chuyển khoản trên hoá đơn in mà không cần xoá thông tin ngân hàng.
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">Có đủ ngân hàng + số tài khoản sẽ tự hiện mã QR chuyển khoản đúng số tiền trên hóa đơn. Để trống sẽ không hiện QR.</p>
                 </CardContent>
               </Card>
@@ -605,6 +628,7 @@ export default function SettingsPage() {
                   showWebsite={invoiceShowWebsite} showBarcode={invoiceShowBarcode}
                   showQr={invoiceShowQR} showDebt={invoiceShowDebt}
                   openingHours={openingHours}
+                  bookingQrEnabled={bookingQrEnabled}
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">Giả lập khổ giấy 80mm</p>
