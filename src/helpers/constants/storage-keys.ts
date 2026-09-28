@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   token: 'laundry.token',
   user: 'laundry.user',
+  subscriptionBannerDismissedAt: 'laundry.subscriptionBannerDismissedAt',
 } as const;
 
 // Riêng cho phiên platform-admin (quản lý nhiều tiệm) — khoá khác hoàn toàn

@@ -17,6 +17,8 @@ export interface PlatformLoginResult {
   admin: PlatformAdmin;
 }
 
+export type SubscriptionPlan = 'TRIAL' | 'LEGACY' | 'SIX_MONTHS' | 'ONE_YEAR' | 'THREE_YEARS';
+
 export interface Shop {
   id: string;
   name: string;
@@ -27,6 +29,8 @@ export interface Shop {
   createdAt: string;
   webhookToken: string | null;
   hasWebhookSecret: boolean;
+  subscriptionEndsAt: string;
+  currentPlan: SubscriptionPlan;
   _count: { users: number };
 }
 
@@ -66,6 +70,8 @@ export const platformApi = {
     unwrap<{ hasWebhookSecret: boolean }>(
       platformClient.put(`/platform/shops/${shopId}/webhook/secret`, { webhookSecret }),
     ),
+  activateSubscription: (shopId: string, plan: Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>) =>
+    unwrap<Shop>(platformClient.patch(`/platform/shops/${shopId}/subscription`, { plan })),
 };
 
 /** Base URL API dùng để hiển thị link webhook đầy đủ cho từng tiệm. */

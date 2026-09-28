@@ -36,9 +36,22 @@ export interface ShopSettings {
   allowNoShiftOrder: boolean;
   bookingQrEnabled: boolean;
   bookingQrUrl: string;
+  subscriptionEndsAt: string;
+  currentPlan: string;
+  subscriptionDaysRemaining: number;
 }
 
-export type SettingsPayload = Partial<Omit<ShopSettings, 'id' | 'shopSlug' | 'bookingQrUrl'>>;
+export type SettingsPayload = Partial<
+  Omit<
+    ShopSettings,
+    | 'id'
+    | 'shopSlug'
+    | 'bookingQrUrl'
+    | 'subscriptionEndsAt'
+    | 'currentPlan'
+    | 'subscriptionDaysRemaining'
+  >
+>;
 
 export interface PublicShopInfo {
   shopId: string;

@@ -24,6 +24,7 @@ import {
   HandCoins,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { SubscriptionBanner } from '@/components/common/subscription-banner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -162,6 +163,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
+
+        <SubscriptionBanner />
 
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Plus, UserPlus, Link2, Copy, RefreshCw } from 'lucide-react';
+import { Plus, UserPlus, Link2, Copy, RefreshCw, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,9 +26,48 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { EmptyState } from '@/components/common/empty-state';
-import { platformApi, PLATFORM_API_BASE_URL, type Shop } from '@/services/api/platform.api';
+import {
+  platformApi,
+  PLATFORM_API_BASE_URL,
+  type Shop,
+  type SubscriptionPlan,
+} from '@/services/api/platform.api';
 import { extractError } from '@/services/api/client';
 import { formatDate } from '@/lib/utils';
+
+type PaidPlan = Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>;
+
+const PLAN_LABELS: Record<SubscriptionPlan, string> = {
+  TRIAL: 'Dùng thử',
+  LEGACY: 'Tiệm cũ',
+  SIX_MONTHS: '6 tháng',
+  ONE_YEAR: '1 năm',
+  THREE_YEARS: '3 năm',
+};
+
+const PAID_PLANS: PaidPlan[] = ['SIX_MONTHS', 'ONE_YEAR', 'THREE_YEARS'];
+
+function daysUntil(date: string) {
+  return Math.ceil((new Date(date).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
+function SubscriptionCell({ shop }: { shop: Shop }) {
+  const days = daysUntil(shop.subscriptionEndsAt);
+  const tone =
+    days <= 0
+      ? 'text-rose-600'
+      : days <= 7
+        ? 'text-amber-600'
+        : 'text-muted-foreground';
+  return (
+    <div className="space-y-0.5">
+      <p className="text-sm font-medium">{PLAN_LABELS[shop.currentPlan] ?? shop.currentPlan}</p>
+      <p className={`text-xs ${tone}`}>
+        {days <= 0 ? 'Hết hạn' : `Còn ${days} ngày`} · {formatDate(shop.subscriptionEndsAt)}
+      </p>
+    </div>
+  );
+}
 
 export default function PlatformShopsPage() {
   const queryClient = useQueryClient();
@@ -48,6 +87,10 @@ export default function PlatformShopsPage() {
   const [webhookFormOpen, setWebhookFormOpen] = useState(false);
   const [webhookTarget, setWebhookTarget] = useState<Shop | undefined>();
   const [webhookSecretInput, setWebhookSecretInput] = useState('');
+
+  const [planFormOpen, setPlanFormOpen] = useState(false);
+  const [planTarget, setPlanTarget] = useState<Shop | undefined>();
+  const [planChoice, setPlanChoice] = useState<PaidPlan>('ONE_YEAR');
 
   const query = useQuery({
     queryKey: ['platform-shops'],
@@ -128,6 +171,22 @@ export default function PlatformShopsPage() {
     setWebhookFormOpen(true);
   }
 
+  const activatePlanMutation = useMutation({
+    mutationFn: (shopId: string) => platformApi.activateSubscription(shopId, planChoice),
+    onSuccess: (shop) => {
+      toast.success(`Đã kích hoạt gói — hạn mới ${formatDate(shop.subscriptionEndsAt)}`);
+      queryClient.invalidateQueries({ queryKey: ['platform-shops'] });
+      setPlanFormOpen(false);
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  function openPlan(shop: Shop) {
+    setPlanTarget(shop);
+    setPlanChoice('ONE_YEAR');
+    setPlanFormOpen(true);
+  }
+
   function copyWebhookUrl(token: string) {
     const url = `${PLATFORM_API_BASE_URL}/webhooks/gpmpay/${token}`;
     navigator.clipboard.writeText(url).then(() => toast.success('Đã copy link webhook'));
@@ -163,6 +222,7 @@ export default function PlatformShopsPage() {
                 <TableHead>SĐT</TableHead>
                 <TableHead>Số tài khoản</TableHead>
                 <TableHead>Trạng thái</TableHead>
+                <TableHead>Gói / Hạn dùng</TableHead>
                 <TableHead>Tạo lúc</TableHead>
                 <TableHead className="w-16 text-right">Thao tác</TableHead>
               </TableRow>
@@ -185,6 +245,9 @@ export default function PlatformShopsPage() {
                       {shop.isActive ? 'Hoạt động' : 'Đã khoá'}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <SubscriptionCell shop={shop} />
+                  </TableCell>
                   <TableCell>{formatDate(shop.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -202,6 +265,14 @@ export default function PlatformShopsPage() {
                       onClick={() => openWebhook(shop)}
                     >
                       <Link2 className="h-4 w-4 text-emerald-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Gia hạn gói dịch vụ"
+                      onClick={() => openPlan(shop)}
+                    >
+                      <CalendarClock className="h-4 w-4 text-amber-600" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -385,6 +456,51 @@ export default function PlatformShopsPage() {
               disabled={setSecretMutation.isPending || !webhookSecretInput}
             >
               {setSecretMutation.isPending ? 'Đang lưu…' : 'Lưu secret'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Subscription Dialog */}
+      <Dialog open={planFormOpen} onOpenChange={setPlanFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gia hạn gói — {planTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {planTarget && (
+              <p className="text-sm text-muted-foreground">
+                Gói hiện tại: <b>{PLAN_LABELS[planTarget.currentPlan] ?? planTarget.currentPlan}</b>,
+                hết hạn {formatDate(planTarget.subscriptionEndsAt)}. Gói mới được cộng nối tiếp vào
+                hạn còn lại (hoặc tính từ hôm nay nếu đã hết hạn).
+              </p>
+            )}
+            <div className="grid grid-cols-3 gap-2">
+              {PAID_PLANS.map((plan) => (
+                <button
+                  key={plan}
+                  type="button"
+                  onClick={() => setPlanChoice(plan)}
+                  className={`rounded-lg border px-3 py-3 text-sm font-semibold transition ${
+                    planChoice === plan
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-input hover:bg-accent'
+                  }`}
+                >
+                  {PLAN_LABELS[plan]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPlanFormOpen(false)}>
+              Huỷ
+            </Button>
+            <Button
+              onClick={() => planTarget && activatePlanMutation.mutate(planTarget.id)}
+              disabled={activatePlanMutation.isPending}
+            >
+              {activatePlanMutation.isPending ? 'Đang lưu…' : 'Kích hoạt'}
             </Button>
           </DialogFooter>
         </DialogContent>
