@@ -17,7 +17,13 @@ export interface PlatformLoginResult {
   admin: PlatformAdmin;
 }
 
-export type SubscriptionPlan = 'TRIAL' | 'LEGACY' | 'SIX_MONTHS' | 'ONE_YEAR' | 'THREE_YEARS';
+export type SubscriptionPlan =
+  | 'TRIAL'
+  | 'LEGACY'
+  | 'SIX_MONTHS'
+  | 'ONE_YEAR'
+  | 'THREE_YEARS'
+  | 'LIFETIME';
 
 export type PaidPlan = Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>;
 

@@ -77,7 +77,7 @@ interface PreviewProps {
   showLogo: boolean; showShopName: boolean; showPhone: boolean;
   showAddress: boolean; showWebsite: boolean; showBarcode: boolean;
   showQr: boolean; showDebt: boolean; openingHours: string;
-  bookingQrEnabled: boolean;
+  bookingQrEnabled: boolean; invoiceNote: string;
 }
 
 function ReceiptPreview(p: PreviewProps) {
@@ -181,11 +181,19 @@ function ReceiptPreview(p: PreviewProps) {
         )}
       </div>
 
+      {/* ── Ghi chú hoá đơn — ngay sau tổng tiền, trước mã QR (giống bill thật) ── */}
+      {p.invoiceNote.trim() && (
+        <div className="mx-3 my-2 rounded-md border-2 border-black p-2 text-center">
+          <p className="whitespace-pre-line font-black" style={{ fontSize: base, lineHeight: 1.6 }}>
+            {p.invoiceNote}
+          </p>
+        </div>
+      )}
+
       {/* ── QR chuyển khoản + QR đặt lịch — giống hệt logic bill thật ── */}
       {showBothQr ? (
         <div className="flex justify-center gap-2 py-2">
           <div className="flex flex-col items-center gap-1 rounded border-2 border-black px-2 py-1.5">
-            <p style={{ fontSize: Math.max(sm - 2, 8) }} className="font-bold">Chuyển khoản</p>
             <div className="h-11 w-11 border border-gray-300 bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 rounded">QR</div>
           </div>
           <div className="flex flex-col items-center gap-1 rounded border-2 border-black px-2 py-1.5">
@@ -205,15 +213,9 @@ function ReceiptPreview(p: PreviewProps) {
         </>
       )}
 
-      {/* ── Footer ── */}
-      {p.openingHours && (
-        <div className="border-t border-gray-300 mx-3 mt-1" />
-      )}
+      {/* ── Footer: giờ mở cửa ở cuối cùng ── */}
       <div className="px-4 pt-1 pb-4 text-center" style={{ fontSize: sm }}>
-        {p.openingHours && (
-          <p className="text-gray-500">Thời gian mở cửa: {p.openingHours}</p>
-        )}
-        <p className="mt-1 text-gray-400">Cảm ơn quý khách!</p>
+        {p.openingHours && <p className="text-gray-500">Giờ mở cửa: {p.openingHours}</p>}
       </div>
     </div>
   );
@@ -629,6 +631,7 @@ export default function SettingsPage() {
                   showQr={invoiceShowQR} showDebt={invoiceShowDebt}
                   openingHours={openingHours}
                   bookingQrEnabled={bookingQrEnabled}
+                  invoiceNote={invoiceNote}
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">Giả lập khổ giấy 80mm</p>

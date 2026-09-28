@@ -43,6 +43,7 @@ const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   SIX_MONTHS: '6 tháng',
   ONE_YEAR: '1 năm',
   THREE_YEARS: '3 năm',
+  LIFETIME: 'Trọn đời',
 };
 
 const ACTIVATABLE_PLANS: { plan: ActivatablePlan; hint: string }[] = [
@@ -50,6 +51,7 @@ const ACTIVATABLE_PLANS: { plan: ActivatablePlan; hint: string }[] = [
   { plan: 'SIX_MONTHS', hint: '+6 tháng' },
   { plan: 'ONE_YEAR', hint: '+1 năm' },
   { plan: 'THREE_YEARS', hint: '+3 năm' },
+  { plan: 'LIFETIME', hint: 'Không giới hạn' },
 ];
 
 function daysUntil(date: string) {
@@ -57,6 +59,14 @@ function daysUntil(date: string) {
 }
 
 function SubscriptionCell({ shop }: { shop: Shop }) {
+  if (shop.currentPlan === 'LIFETIME') {
+    return (
+      <div className="space-y-0.5">
+        <p className="text-sm font-medium">{PLAN_LABELS.LIFETIME}</p>
+        <p className="text-xs text-emerald-600">Không giới hạn</p>
+      </div>
+    );
+  }
   const days = daysUntil(shop.subscriptionEndsAt);
   const tone =
     days <= 0
@@ -481,18 +491,23 @@ export default function PlatformShopsPage() {
             <DialogTitle>Gia hạn gói — {planTarget?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {planTarget && (
+            {planTarget?.currentPlan === 'LIFETIME' ? (
+              <p className="text-sm text-muted-foreground">
+                Tiệm đã có gói <b>trọn đời</b>, không cần gia hạn thêm.
+              </p>
+            ) : planTarget && (
               <p className="text-sm text-muted-foreground">
                 Gói hiện tại: <b>{PLAN_LABELS[planTarget.currentPlan] ?? planTarget.currentPlan}</b>,
                 hết hạn {formatDate(planTarget.subscriptionEndsAt)}. Gói mới được cộng nối tiếp vào
                 hạn còn lại (hoặc tính từ hôm nay nếu đã hết hạn).
               </p>
             )}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {ACTIVATABLE_PLANS.map(({ plan, hint }) => (
                 <button
                   key={plan}
                   type="button"
+                  disabled={planTarget?.currentPlan === 'LIFETIME'}
                   onClick={() => setPlanChoice(plan)}
                   className={`rounded-lg border px-3 py-3 text-sm font-semibold transition ${
                     planChoice === plan
@@ -507,9 +522,11 @@ export default function PlatformShopsPage() {
                   <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
                     {plan === 'TRIAL'
                       ? 'Miễn phí'
-                      : priceOf(plan) !== undefined
-                        ? `${priceOf(plan)!.toLocaleString('vi-VN')}đ`
-                        : '…'}
+                      : priceOf(plan) === undefined
+                        ? '…'
+                        : priceOf(plan) === 0
+                          ? 'Chưa đặt giá'
+                          : `${priceOf(plan)!.toLocaleString('vi-VN')}đ`}
                   </span>
                 </button>
               ))}
@@ -521,7 +538,7 @@ export default function PlatformShopsPage() {
             </Button>
             <Button
               onClick={() => planTarget && activatePlanMutation.mutate(planTarget.id)}
-              disabled={activatePlanMutation.isPending}
+              disabled={activatePlanMutation.isPending || planTarget?.currentPlan === 'LIFETIME'}
             >
               {activatePlanMutation.isPending ? 'Đang lưu…' : 'Kích hoạt'}
             </Button>

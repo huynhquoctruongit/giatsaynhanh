@@ -46,6 +46,18 @@ const FALLBACK_TIERS: Tier[] = [
       'Tặng máy POS bán hàng SUNMI T2',
     ],
   },
+  {
+    name: 'Gói Setup trọn đời',
+    period: '/trọn đời',
+    description: 'Setup mọi thứ để tiệm vận hành trơn tru ngay từ ngày đầu.',
+    price: 0,
+    features: [
+      'Sử dụng phần mềm trọn đời, không cần gia hạn',
+      'Tặng máy POS bán hàng SUNMI T2',
+      'Tặng máy quét đơn',
+      'Hướng dẫn vận hành tiệm giặt sấy cho tiệm mới mở',
+    ],
+  },
 ];
 
 function formatVnd(v: number) {
@@ -76,7 +88,7 @@ export async function PricingSection() {
           <p className="mt-3 text-slate-600">Chọn gói theo thời hạn cam kết — cam kết càng dài, ưu đãi càng lớn.</p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -95,8 +107,15 @@ export async function PricingSection() {
               <p className="mt-1 text-sm text-slate-500">{tier.description}</p>
 
               <div className="mt-6 flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold tracking-tight">{formatVnd(tier.price)}</span>
-                <span className="text-sm text-slate-500">{tier.period}</span>
+                {tier.price > 0 ? (
+                  <>
+                    <span className="text-3xl font-extrabold tracking-tight">{formatVnd(tier.price)}</span>
+                    <span className="text-sm text-slate-500">{tier.period}</span>
+                  </>
+                ) : (
+                  // Giá 0 = chưa công bố giá
+                  <span className="text-2xl font-extrabold tracking-tight">Liên hệ báo giá</span>
+                )}
               </div>
 
               <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-600">

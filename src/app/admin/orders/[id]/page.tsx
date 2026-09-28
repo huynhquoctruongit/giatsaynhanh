@@ -198,9 +198,12 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>
 
+  ${settings.invoiceNote ? `<div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
+    <p style="font-weight:900;font-size:${base}px;line-height:1.6">${settings.invoiceNote.split('\n').join('<br/>')}</p>
+  </div>` : ''}
+
   ${showBothQr ? `<div style="display:flex;justify-content:center;gap:8px;padding:2px 6px 4px">
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
-      <p style="font-size:${Math.max(sm - 2, 8)}px;font-weight:700;margin-bottom:3px">Chuyển khoản</p>
       <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:90px;height:90px;display:block" />
     </div>
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
@@ -216,14 +219,8 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>` : ''}
   `}
 
-  <hr class="divider"/>
-  <div style="text-align:center;padding:4px 10px 6px;font-size:${sm}px;color:#555">
-    ${settings.openingHours ? `<p>Giờ mở cửa: ${settings.openingHours}</p>` : ''}
-    <p style="margin-top:2px;font-weight:700">Cảm ơn quý khách! Hẹn gặp lại.</p>
-  </div>
-
-  ${settings.invoiceNote ? `<div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
-    <p style="font-weight:900;font-size:${base}px;line-height:1.6">${settings.invoiceNote.split('\n').join('<br/>')}</p>
+  ${settings.openingHours ? `<div style="text-align:center;padding:4px 10px 6px;font-size:${sm}px;color:#555">
+    <p>Giờ mở cửa: ${settings.openingHours}</p>
   </div>` : ''}
 
   <div style="height:16px"></div>
@@ -394,11 +391,24 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
         </div>
       </div>
 
+      {/* Ghi chú hoá đơn (riêng từng tiệm) — ngay sau tổng tiền, trước mã QR */}
+      {settings.invoiceNote && (
+        <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
+          <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
+            {settings.invoiceNote.split('\n').map((line, i, arr) => (
+              <span key={i}>
+                {line}
+                {i < arr.length - 1 && <br />}
+              </span>
+            ))}
+          </p>
+        </div>
+      )}
+
       {/* QR chuyển khoản + QR đặt lịch — nếu bật cả 2 thì chia 2 ô có khung + nhãn để không nhầm mã */}
       {showBothQr ? (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, padding: '2px 6px 4px' }}>
           <div style={{ border: '1.5px solid #000', borderRadius: 6, padding: 6, textAlign: 'center' }}>
-            <p style={{ fontSize: Math.max(sm - 2, 8), fontWeight: 700, marginBottom: 3 }}>Chuyển khoản</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={vietQrUrl(settings, grandTotal, order.code)}
@@ -431,26 +441,13 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
         </>
       )}
 
-      {/* Footer */}
-      <hr style={{ border: 'none', borderTop: '1px dashed #aaa', margin: '4px 8px' }} />
-      <div style={{ textAlign: 'center', padding: '4px 10px 6px', fontSize: sm, color: '#555' }}>
-        {settings.openingHours && <p>Giờ mở cửa: {settings.openingHours}</p>}
-        <p style={{ marginTop: 2, fontWeight: 700 }}>Cảm ơn quý khách! Hẹn gặp lại.</p>
-      </div>
-
-      {/* Ghi chú cuối hoá đơn (riêng từng tiệm) */}
-      {settings.invoiceNote && (
-        <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
-          <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
-            {settings.invoiceNote.split('\n').map((line, i, arr) => (
-              <span key={i}>
-                {line}
-                {i < arr.length - 1 && <br />}
-              </span>
-            ))}
-          </p>
+      {/* Footer: giờ mở cửa ở cuối cùng */}
+      {settings.openingHours && (
+        <div style={{ textAlign: 'center', padding: '4px 10px 6px', fontSize: sm, color: '#555' }}>
+          <p>Giờ mở cửa: {settings.openingHours}</p>
         </div>
       )}
+
     </div>
   );
 }

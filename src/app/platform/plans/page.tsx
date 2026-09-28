@@ -77,7 +77,9 @@ function PlanForm({ config }: { config: PlanConfig }) {
             value={price}
             onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
           />
-          <p className="text-xs text-muted-foreground">{formatVnd(priceNumber)}</p>
+          <p className="text-xs text-muted-foreground">
+            {priceNumber === 0 ? 'Trang chủ hiện "Liên hệ báo giá"' : formatVnd(priceNumber)}
+          </p>
         </div>
         <div className="space-y-2">
           <Label>Nhãn kỳ hạn</Label>
@@ -111,7 +113,7 @@ function PlanForm({ config }: { config: PlanConfig }) {
         </span>
         <Button
           onClick={() => mutation.mutate()}
-          disabled={mutation.isPending || !name.trim() || !period.trim() || !price}
+          disabled={mutation.isPending || !name.trim() || !period.trim() || price === ''}
         >
           {mutation.isPending ? 'Đang lưu…' : 'Lưu'}
         </Button>
@@ -130,17 +132,17 @@ export default function PlatformPlansPage() {
     <div className="space-y-6">
       <PageHeader
         title="Gói dịch vụ"
-        description="Giá và lợi ích từng gói — hiển thị ở mục Bảng giá trên trang chủ. Số ngày của mỗi gói cố định (6 tháng / 1 năm / 3 năm)."
+        description="Giá và lợi ích từng gói — hiển thị ở mục Bảng giá trên trang chủ. Thời hạn mỗi gói cố định (6 tháng / 1 năm / 3 năm / trọn đời). Giá 0 = hiện “Liên hệ báo giá”."
       />
 
       {query.isLoading ? (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-[520px] w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
           {query.data?.map((config) => (
             // key theo updatedAt để form nạp lại giá trị mới sau khi lưu/refetch
             <PlanForm key={`${config.plan}-${config.updatedAt}`} config={config} />
