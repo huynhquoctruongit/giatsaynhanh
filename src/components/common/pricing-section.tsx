@@ -1,20 +1,21 @@
 import { Check, Sparkles } from 'lucide-react';
+import { PLATFORM_API_BASE_URL } from '@/services/api/platform.api';
 
 interface Tier {
   name: string;
   period: string;
-  desc: string;
+  description: string;
   popular?: boolean;
   price: number;
   features: string[];
 }
 
-// Giá tham khảo — chỉnh lại theo chính sách giá thật của bạn.
-const TIERS: Tier[] = [
+// Dự phòng khi không gọi được API — giá thật do platform admin chỉnh ở /platform/plans.
+const FALLBACK_TIERS: Tier[] = [
   {
     name: 'Gói 6 tháng',
     period: '/6 tháng',
-    desc: 'Bắt đầu số hoá quy trình cho tiệm.',
+    description: 'Bắt đầu số hoá quy trình cho tiệm.',
     price: 990_000,
     features: [
       'Quản lý đơn hàng & khách hàng',
@@ -24,7 +25,7 @@ const TIERS: Tier[] = [
   {
     name: 'Gói 1 năm',
     period: '/năm',
-    desc: 'Đầy đủ tính năng đặt lịch & thanh toán.',
+    description: 'Đầy đủ tính năng đặt lịch & thanh toán.',
     popular: true,
     price: 2_490_000,
     features: [
@@ -38,7 +39,7 @@ const TIERS: Tier[] = [
   {
     name: 'Gói 3 năm',
     period: '/3 năm',
-    desc: 'Trọn gói lâu dài, tặng kèm máy POS.',
+    description: 'Trọn gói lâu dài, tặng kèm máy POS.',
     price: 5_990_000,
     features: [
       'Tất cả lợi ích của gói 6 tháng & 1 năm',
@@ -51,7 +52,22 @@ function formatVnd(v: number) {
   return v.toLocaleString('vi-VN') + 'đ';
 }
 
-export function PricingSection() {
+async function fetchTiers(): Promise<Tier[]> {
+  try {
+    const res = await fetch(`${PLATFORM_API_BASE_URL}/platform/public/plans`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return FALLBACK_TIERS;
+    const json = (await res.json()) as { data?: Tier[] };
+    return json.data?.length ? json.data : FALLBACK_TIERS;
+  } catch {
+    return FALLBACK_TIERS;
+  }
+}
+
+export async function PricingSection() {
+  const tiers = await fetchTiers();
+
   return (
     <section id="pricing" className="bg-slate-50/60 py-20">
       <div className="mx-auto max-w-6xl px-5">
@@ -61,7 +77,7 @@ export function PricingSection() {
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <div
               key={tier.name}
               className={`relative flex flex-col rounded-3xl border bg-white p-8 shadow-sm ${
@@ -76,7 +92,7 @@ export function PricingSection() {
               )}
 
               <h3 className="text-lg font-bold">{tier.name}</h3>
-              <p className="mt-1 text-sm text-slate-500">{tier.desc}</p>
+              <p className="mt-1 text-sm text-slate-500">{tier.description}</p>
 
               <div className="mt-6 flex items-baseline gap-1.5">
                 <span className="text-3xl font-extrabold tracking-tight">{formatVnd(tier.price)}</span>

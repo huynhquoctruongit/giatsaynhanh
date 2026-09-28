@@ -19,6 +19,25 @@ export interface PlatformLoginResult {
 
 export type SubscriptionPlan = 'TRIAL' | 'LEGACY' | 'SIX_MONTHS' | 'ONE_YEAR' | 'THREE_YEARS';
 
+export type PaidPlan = Exclude<SubscriptionPlan, 'TRIAL' | 'LEGACY'>;
+
+export interface PlanConfig {
+  plan: PaidPlan;
+  name: string;
+  period: string;
+  description: string;
+  price: number;
+  features: string[];
+  popular: boolean;
+  sortOrder: number;
+  updatedAt: string;
+}
+
+export type PlanConfigPayload = Pick<
+  PlanConfig,
+  'name' | 'period' | 'description' | 'price' | 'features' | 'popular'
+>;
+
 export interface Shop {
   id: string;
   name: string;
@@ -70,6 +89,9 @@ export const platformApi = {
     unwrap<{ hasWebhookSecret: boolean }>(
       platformClient.put(`/platform/shops/${shopId}/webhook/secret`, { webhookSecret }),
     ),
+  listPlans: () => unwrap<PlanConfig[]>(platformClient.get('/platform/plans')),
+  updatePlan: (plan: PaidPlan, payload: PlanConfigPayload) =>
+    unwrap<PlanConfig>(platformClient.put(`/platform/plans/${plan}`, payload)),
   activateSubscription: (shopId: string, plan: Exclude<SubscriptionPlan, 'LEGACY'>) =>
     unwrap<Shop>(platformClient.patch(`/platform/shops/${shopId}/subscription`, { plan })),
 };

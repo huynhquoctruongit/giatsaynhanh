@@ -102,6 +102,14 @@ export default function PlatformShopsPage() {
     queryFn: () => platformApi.listShops(),
   });
 
+  const plansQuery = useQuery({
+    queryKey: ['platform-plans'],
+    queryFn: () => platformApi.listPlans(),
+    enabled: planFormOpen,
+  });
+  const priceOf = (plan: ActivatablePlan) =>
+    plansQuery.data?.find((p) => p.plan === plan)?.price;
+
   const createShopMutation = useMutation({
     mutationFn: () =>
       platformApi.createShop({
@@ -495,6 +503,13 @@ export default function PlatformShopsPage() {
                   {PLAN_LABELS[plan]}
                   <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
                     {hint}
+                  </span>
+                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                    {plan === 'TRIAL'
+                      ? 'Miễn phí'
+                      : priceOf(plan) !== undefined
+                        ? `${priceOf(plan)!.toLocaleString('vi-VN')}đ`
+                        : '…'}
                   </span>
                 </button>
               ))}
