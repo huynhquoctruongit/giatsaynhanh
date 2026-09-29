@@ -35,6 +35,8 @@ export interface PlanConfig {
   price: number;
   features: string[];
   popular: boolean;
+  /** Thẻ nổi bật viền gradient vàng trên bảng giá */
+  vip: boolean;
   /** false = đã xoá (ẩn khỏi bảng giá, không kích hoạt được) */
   isActive: boolean;
   sortOrder: number;
@@ -43,7 +45,7 @@ export interface PlanConfig {
 
 export type PlanConfigPayload = Pick<
   PlanConfig,
-  'name' | 'period' | 'description' | 'price' | 'features' | 'popular'
+  'name' | 'period' | 'description' | 'price' | 'features' | 'popular' | 'vip'
 >;
 
 export interface Shop {

@@ -15,12 +15,14 @@ import {
   Building2,
   ArrowRight,
   Phone,
-  Mail,
+  MapPin,
+  MessageCircle,
   CheckCircle2,
   LayoutDashboard,
   Bell,
 } from 'lucide-react';
 import { PricingSection } from '@/components/common/pricing-section';
+import { CONTACT } from '@/helpers/constants/contact';
 
 export const metadata: Metadata = {
   title: 'Giặt Sấy Nhanh — Phần mềm quản lý tiệm giặt ủi',
@@ -330,10 +332,11 @@ export default function LandingPage() {
               <ArrowRight className="h-5 w-5" />
             </a>
             <a
-              href="#contact"
+              href={CONTACT.telUrl}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/40 px-7 text-base font-semibold text-white transition hover:bg-white/10"
             >
-              Liên hệ tư vấn
+              <Phone className="h-5 w-5" />
+              Gọi tư vấn {CONTACT.phoneDisplay}
             </a>
           </div>
         </div>
@@ -358,13 +361,33 @@ export default function LandingPage() {
           <div>
             <h4 className="text-sm font-bold uppercase tracking-wide text-slate-400">Liên hệ tư vấn</h4>
             <ul className="mt-4 space-y-3 text-sm text-slate-600">
-              <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" />
-                <span className="text-slate-400">(Cập nhật số điện thoại/Zalo)</span>
+              <li>
+                <a href={CONTACT.telUrl} className="flex items-center gap-2 font-semibold text-slate-900 hover:text-primary">
+                  <Phone className="h-4 w-4 shrink-0 text-primary" />
+                  {CONTACT.phoneDisplay}
+                </a>
               </li>
-              <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-primary" />
-                <span className="text-slate-400">(Cập nhật email liên hệ)</span>
+              <li>
+                <a
+                  href={CONTACT.zaloUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-primary"
+                >
+                  <MessageCircle className="h-4 w-4 shrink-0 text-primary" />
+                  Nhắn Zalo {CONTACT.phoneDisplay}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={CONTACT.mapUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 hover:text-primary"
+                >
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {CONTACT.address}
+                </a>
               </li>
             </ul>
           </div>

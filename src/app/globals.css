@@ -137,3 +137,38 @@
     overflow-wrap: anywhere;
   }
 }
+
+/*
+ * Gói VIP trên bảng giá: viền gradient vàng ánh kim chạy vòng quanh thẻ.
+ * Kỹ thuật 2 lớp nền: padding-box = nền trắng, border-box = gradient → lộ ra đúng phần viền.
+ */
+@keyframes vip-shine {
+  to {
+    background-position: 0 0, 300% 0;
+  }
+}
+.vip-card {
+  border: 3px solid transparent;
+  background:
+    linear-gradient(180deg, #fffbeb, #fff 35%) padding-box,
+    linear-gradient(115deg, #fde68a, #f59e0b, #b45309, #fcd34d, #f59e0b, #fde68a) border-box;
+  background-size: 100% 100%, 300% 100%;
+  box-shadow:
+    0 0 0 4px rgb(251 191 36 / 0.12),
+    0 24px 48px -16px rgb(217 119 6 / 0.45);
+  animation: vip-shine 6s linear infinite;
+}
+@media (min-width: 1024px) {
+  .vip-card {
+    transform: translateY(-8px);
+  }
+}
+.vip-badge {
+  color: #451a03;
+  background: linear-gradient(115deg, #fde68a, #f59e0b, #fcd34d);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vip-card {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, CalendarClock, X } from 'lucide-react';
 import { settingsApi } from '@/services/api/settings.api';
 import { STORAGE_KEYS } from '@/helpers/constants/storage-keys';
+import { CONTACT } from '@/helpers/constants/contact';
 import { cn, formatDate } from '@/lib/utils';
 
 /** Bắt đầu nhắc khi còn <= số ngày này. */
@@ -69,8 +70,13 @@ export function SubscriptionBanner() {
       <Icon className="mt-0.5 h-4 w-4 shrink-0 md:mt-0" />
       <p className="flex-1">
         {message}{' '}
+        Gọi/Zalo{' '}
+        <a href={CONTACT.telUrl} className="font-semibold underline underline-offset-2">
+          {CONTACT.phoneDisplay}
+        </a>{' '}
+        hoặc{' '}
         <Link href="/#pricing" target="_blank" className="font-semibold underline underline-offset-2">
-          Xem bảng giá & gia hạn
+          xem bảng giá & gia hạn
         </Link>
       </p>
       {!expired && (

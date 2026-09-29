@@ -8,7 +8,13 @@ export const metadata: Metadata = {
   description: 'Quản lý đơn giặt sấy với QR code',
   // iPhone: "Thêm vào MH chính" → chạy toàn màn hình (không thanh địa chỉ) với icon riêng
   appleWebApp: { capable: true, title: 'Giặt Sấy', statusBarStyle: 'default' },
-  icons: { apple: '/apple-touch-icon.png' },
+  // src/app/favicon.ico được Next tự gắn; khai báo icons ở đây đè mất icon.svg tự động
+  // → thêm lại .svg (sắc nét trên trình duyệt mới) + icon iPhone.
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
   // iOS cũ chỉ đọc thẻ này (Next chỉ sinh mobile-web-app-capable)
   other: { 'apple-mobile-web-app-capable': 'yes' },
 };

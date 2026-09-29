@@ -1,11 +1,14 @@
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Crown, Sparkles } from 'lucide-react';
 import { PLATFORM_API_BASE_URL } from '@/services/api/platform.api';
+import { CONTACT } from '@/helpers/constants/contact';
 
 interface Tier {
   name: string;
   period: string;
   description: string;
   popular?: boolean;
+  /** Thẻ VIP: viền gradient vàng chuyển động */
+  vip?: boolean;
   price: number;
   features: string[];
 }
@@ -102,11 +105,20 @@ export async function PricingSection() {
           {tiers.map((tier) => (
             <div
               key={tier.name}
-              className={`relative flex flex-col rounded-3xl border bg-white p-8 shadow-sm ${
-                tier.popular ? 'border-primary shadow-lg ring-1 ring-primary' : 'border-slate-100'
+              className={`relative flex flex-col rounded-3xl bg-white p-8 ${
+                tier.vip
+                  ? 'vip-card'
+                  : tier.popular
+                    ? 'border border-primary shadow-lg ring-1 ring-primary'
+                    : 'border border-slate-100 shadow-sm'
               }`}
             >
-              {tier.popular && (
+              {tier.vip ? (
+                <span className="vip-badge absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full px-3 py-1 text-xs font-extrabold tracking-wide shadow">
+                  <Crown className="h-3.5 w-3.5" />
+                  VIP{tier.popular ? ' · Phổ biến nhất' : ''}
+                </span>
+              ) : tier.popular && (
                 <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow">
                   <Sparkles className="h-3.5 w-3.5" />
                   Phổ biến nhất
@@ -131,16 +143,20 @@ export async function PricingSection() {
               <ul className="mt-6 flex-1 space-y-3 text-sm text-slate-600">
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <Check className={`mt-0.5 h-4 w-4 shrink-0 ${tier.vip ? 'text-amber-500' : 'text-primary'}`} />
                     {f}
                   </li>
                 ))}
               </ul>
 
               <a
-                href="#contact"
+                href={CONTACT.zaloUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={`mt-8 inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition ${
-                  tier.popular
+                  tier.vip
+                    ? 'vip-badge shadow-md hover:brightness-105'
+                    : tier.popular
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                 }`}
@@ -152,7 +168,11 @@ export async function PricingSection() {
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-400">
-          * Giá tham khảo, liên hệ để được tư vấn và báo giá chính xác theo nhu cầu.
+          * Giá tham khảo, liên hệ{' '}
+          <a href={CONTACT.telUrl} className="font-semibold text-slate-500 hover:text-primary">
+            {CONTACT.phoneDisplay}
+          </a>{' '}
+          (gọi hoặc Zalo) để được tư vấn và báo giá chính xác theo nhu cầu.
         </p>
       </div>
     </section>

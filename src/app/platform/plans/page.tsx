@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { RotateCcw, Sparkles, Trash2 } from 'lucide-react';
+import { Crown, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ function PlanForm({ config }: { config: PlanConfig }) {
   const [price, setPrice] = useState(String(config.price));
   const [features, setFeatures] = useState(config.features.join('\n'));
   const [popular, setPopular] = useState(config.popular);
+  const [vip, setVip] = useState(config.vip);
 
   const priceNumber = Number(price.replace(/\D/g, ''));
   const featureList = features
@@ -44,6 +45,7 @@ function PlanForm({ config }: { config: PlanConfig }) {
         price: priceNumber,
         features: featureList,
         popular,
+        vip,
       }),
     onSuccess: () => {
       toast.success(`Đã lưu ${name}`);
@@ -81,14 +83,25 @@ function PlanForm({ config }: { config: PlanConfig }) {
   }
 
   return (
-    <Card className={`flex flex-col gap-4 p-5 ${popular ? 'ring-1 ring-primary' : ''}`}>
-      <div className="flex items-center justify-between">
+    <Card
+      className={`flex flex-col gap-4 p-5 ${
+        vip ? 'ring-2 ring-amber-400 shadow-lg shadow-amber-500/10' : popular ? 'ring-1 ring-primary' : ''
+      }`}
+    >
+      <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-xs text-muted-foreground">{config.plan}</span>
-        {popular && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
-            <Sparkles className="h-3 w-3" /> Phổ biến nhất
-          </span>
-        )}
+        <div className="flex gap-1">
+          {vip && (
+            <span className="vip-badge inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold">
+              <Crown className="h-3 w-3" /> VIP
+            </span>
+          )}
+          {popular && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+              <Sparkles className="h-3 w-3" /> Phổ biến nhất
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -132,6 +145,10 @@ function PlanForm({ config }: { config: PlanConfig }) {
       <label className="flex cursor-pointer items-center gap-2 text-sm">
         <Checkbox checked={popular} onCheckedChange={setPopular} />
         Gắn nhãn &quot;Phổ biến nhất&quot; (chỉ 1 gói)
+      </label>
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <Checkbox checked={vip} onCheckedChange={setVip} />
+        <Crown className="h-4 w-4 text-amber-500" /> VIP — thẻ nổi bật viền gradient vàng trên bảng giá
       </label>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
