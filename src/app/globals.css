@@ -53,3 +53,87 @@
     animation: glow-pulse 2s ease-in-out infinite;
   }
 }
+
+/*
+ * Bảng → thẻ trên điện thoại (giống app): mỗi dòng 1 thẻ, mỗi ô 1 hàng "Nhãn ··· Giá trị".
+ * Nhãn lấy tự động từ tiêu đề cột (data-label, gán trong components/ui/table.tsx).
+ * Ô đầu tiên = thông tin chính (tên khách/dịch vụ…) → hiện to, không nhãn.
+ */
+@media (max-width: 767px) {
+  .rtable thead {
+    display: none;
+  }
+  .rtable,
+  .rtable tbody {
+    display: block;
+    width: 100%;
+  }
+  .rtable tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.875rem;
+    background: hsl(var(--card));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  }
+  .rtable tbody tr:last-child {
+    border: 1px solid hsl(var(--border));
+    margin-bottom: 0;
+  }
+  .rtable td {
+    display: grid;
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: start;
+    max-width: none;
+    padding: 0.3rem 0;
+    text-align: right;
+    white-space: normal;
+  }
+  .rtable td::before {
+    content: attr(data-label);
+    grid-column: 1;
+    grid-row: 1 / span 20;
+    text-align: left;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .rtable td > * {
+    grid-column: 2;
+    justify-self: end;
+  }
+  /* Ô không có nhãn (cột thao tác, ô gộp) → chiếm cả hàng */
+  .rtable td[data-label=''] {
+    display: block;
+    text-align: left;
+  }
+  .rtable td[data-label='']::before {
+    content: none;
+  }
+  .rtable td:empty {
+    display: none;
+  }
+  /* Ô đầu = tiêu đề thẻ */
+  .rtable td:first-child {
+    display: block;
+    margin-bottom: 0.25rem;
+    padding: 0 0 0.5rem;
+    border-bottom: 1px dashed hsl(var(--border));
+    text-align: left;
+    font-size: 1rem;
+  }
+  .rtable td:first-child::before {
+    content: none;
+  }
+  /* Chrome mới áp justify-self cả trong block → trả về mặc định cho ô không nhãn */
+  .rtable td:first-child > *,
+  .rtable td[data-label=''] > * {
+    justify-self: auto;
+  }
+  /* Mã đơn / chuỗi dài không cắt mất */
+  .rtable td {
+    overflow-wrap: anywhere;
+  }
+}

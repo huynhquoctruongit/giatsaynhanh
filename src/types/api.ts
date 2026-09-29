@@ -82,6 +82,8 @@ export interface Order {
   status: OrderStatus;
   totalAmount: number;
   discountAmount?: number;
+  /** Tổng khách đã chuyển khoản cho đơn (khớp tự động theo mã đơn trong nội dung CK) */
+  transferredAmount?: number | string;
   note: string | null;
   pickupAt: string | null;
   deliveredAt: string | null;

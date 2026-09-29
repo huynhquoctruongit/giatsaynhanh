@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Sparkles } from 'lucide-react';
+import { RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,6 +52,33 @@ function PlanForm({ config }: { config: PlanConfig }) {
     },
     onError: (err) => toast.error(extractError(err).message),
   });
+
+  const toggleActive = useMutation({
+    mutationFn: () => (config.isActive ? platformApi.deletePlan(config.plan) : platformApi.restorePlan(config.plan)),
+    onSuccess: () => {
+      toast.success(config.isActive ? `Đã xoá ${config.name}` : `Đã khôi phục ${config.name}`);
+      queryClient.invalidateQueries({ queryKey: ['platform-plans'] });
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  if (!config.isActive) {
+    return (
+      <Card className="flex flex-col gap-3 border-dashed bg-muted/40 p-5 opacity-80">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-xs text-muted-foreground">{config.plan}</span>
+          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">Đã xoá</span>
+        </div>
+        <p className="font-semibold">{config.name}</p>
+        <p className="text-sm text-muted-foreground">
+          Không hiện trên bảng giá và không kích hoạt được cho tiệm. Tiệm đang dùng gói này vẫn giữ nguyên hạn.
+        </p>
+        <Button variant="outline" className="w-fit" onClick={() => toggleActive.mutate()} disabled={toggleActive.isPending}>
+          <RotateCcw className="h-4 w-4" /> {toggleActive.isPending ? 'Đang khôi phục…' : 'Khôi phục'}
+        </Button>
+      </Card>
+    );
+  }
 
   return (
     <Card className={`flex flex-col gap-4 p-5 ${popular ? 'ring-1 ring-primary' : ''}`}>
@@ -107,16 +134,30 @@ function PlanForm({ config }: { config: PlanConfig }) {
         Gắn nhãn &quot;Phổ biến nhất&quot; (chỉ 1 gói)
       </label>
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">
           Cập nhật {formatDateTime(config.updatedAt)}
         </span>
+        <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive/10"
+          disabled={toggleActive.isPending}
+          onClick={() =>
+            window.confirm(
+              `Xoá "${config.name}"?\nGói sẽ ẩn khỏi bảng giá trang chủ và không kích hoạt được cho tiệm (khôi phục lại được).`,
+            ) && toggleActive.mutate()
+          }
+        >
+          <Trash2 className="h-4 w-4" /> Xoá
+        </Button>
         <Button
           onClick={() => mutation.mutate()}
           disabled={mutation.isPending || !name.trim() || !period.trim() || price === ''}
         >
           {mutation.isPending ? 'Đang lưu…' : 'Lưu'}
         </Button>
+        </div>
       </div>
     </Card>
   );
@@ -145,7 +186,7 @@ export default function PlatformPlansPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {query.data?.map((config) => (
             // key theo updatedAt để form nạp lại giá trị mới sau khi lưu/refetch
-            <PlanForm key={`${config.plan}-${config.updatedAt}`} config={config} />
+            <PlanForm key={`${config.plan}-${config.updatedAt}-${config.isActive}`} config={config} />
           ))}
         </div>
       )}

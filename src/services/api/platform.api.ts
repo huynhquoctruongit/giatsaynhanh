@@ -35,6 +35,8 @@ export interface PlanConfig {
   price: number;
   features: string[];
   popular: boolean;
+  /** false = đã xoá (ẩn khỏi bảng giá, không kích hoạt được) */
+  isActive: boolean;
   sortOrder: number;
   updatedAt: string;
 }
@@ -98,6 +100,8 @@ export const platformApi = {
   listPlans: () => unwrap<PlanConfig[]>(platformClient.get('/platform/plans')),
   updatePlan: (plan: PaidPlan, payload: PlanConfigPayload) =>
     unwrap<PlanConfig>(platformClient.put(`/platform/plans/${plan}`, payload)),
+  deletePlan: (plan: PaidPlan) => unwrap<PlanConfig>(platformClient.delete(`/platform/plans/${plan}`)),
+  restorePlan: (plan: PaidPlan) => unwrap<PlanConfig>(platformClient.post(`/platform/plans/${plan}/restore`)),
   activateSubscription: (shopId: string, plan: Exclude<SubscriptionPlan, 'LEGACY'>) =>
     unwrap<Shop>(platformClient.patch(`/platform/shops/${shopId}/subscription`, { plan })),
 };

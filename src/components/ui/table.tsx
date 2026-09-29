@@ -1,12 +1,53 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...props} />
-    </div>
-  ),
+/** Gán data-label (= tiêu đề cột) cho từng ô để CSS .rtable hiện dạng thẻ trên điện thoại. */
+function applyCellLabels(table: HTMLTableElement) {
+  const labels: string[] = [];
+  table.querySelectorAll('thead tr:first-child th').forEach((th) => {
+    const span = (th as HTMLTableCellElement).colSpan || 1;
+    for (let i = 0; i < span; i += 1) labels.push(th.textContent?.trim() ?? '');
+  });
+  table.querySelectorAll('tbody tr').forEach((tr) => {
+    let col = 0;
+    Array.from((tr as HTMLTableRowElement).cells).forEach((td) => {
+      const label = td.colSpan > 1 ? '' : (labels[col] ?? '');
+      if (td.getAttribute('data-label') !== label) td.setAttribute('data-label', label);
+      col += td.colSpan || 1;
+    });
+  });
+}
+
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /** false = giữ dạng bảng cả trên điện thoại (mặc định: thành thẻ khi < 768px) */
+  responsive?: boolean;
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, responsive = true, ...props }, ref) => {
+    const innerRef = React.useRef<HTMLTableElement | null>(null);
+    React.useImperativeHandle(ref, () => innerRef.current as HTMLTableElement);
+
+    React.useEffect(() => {
+      const table = innerRef.current;
+      if (!table || !responsive) return;
+      applyCellLabels(table);
+      // Dòng thay đổi khi dữ liệu tải lại / mở rộng → gán lại nhãn
+      const observer = new MutationObserver(() => applyCellLabels(table));
+      observer.observe(table, { childList: true, subtree: true });
+      return () => observer.disconnect();
+    }, [responsive]);
+
+    return (
+      <div className="relative w-full overflow-auto">
+        <table
+          ref={innerRef}
+          className={cn('w-full caption-bottom text-sm', responsive && 'rtable', className)}
+          {...props}
+        />
+      </div>
+    );
+  },
 );
 Table.displayName = 'Table';
 

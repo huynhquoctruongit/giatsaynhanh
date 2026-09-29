@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { SubscriptionBanner } from '@/components/common/subscription-banner';
+import { TimeClockButton } from '@/components/common/time-clock-button';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -67,6 +68,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.role === 'ADMIN';
 
   const allNavItems = isAdmin ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS] : NAV_ITEMS;
+  // Tiêu đề trang hiện trên header điện thoại (giống header app)
+  const currentLabel =
+    allNavItems.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))?.label ?? 'Laundry QR';
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -128,8 +132,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <div className="flex flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-8">
+      {/* min-w-0: không cho bảng rộng đẩy cả trang tràn ngang trên điện thoại */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b bg-background/80 px-2 backdrop-blur md:h-16 md:gap-3 md:px-8">
           <Button
             size="icon"
             variant="ghost"
@@ -138,14 +143,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex-1" />
+          <p className="min-w-0 flex-1 truncate text-lg font-bold md:hidden">{currentLabel}</p>
+          <div className="hidden flex-1 md:block" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                   {user?.name?.[0]?.toUpperCase() ?? 'U'}
                 </div>
-                <div className="text-left">
+                <div className="hidden text-left sm:block">
                   <p className="text-sm font-medium leading-none">{user?.name}</p>
                   <p className="text-xs text-muted-foreground">{user?.role}</p>
                 </div>
@@ -166,8 +172,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <SubscriptionBanner />
 
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
+        {/* pb-24 trên điện thoại: chừa chỗ cho nút chấm công nổi */}
+        <main className="flex-1 px-3 pb-24 pt-4 md:px-8 md:py-8">{children}</main>
       </div>
+
+      {/* Nút chấm công nổi trên mọi trang quản lý */}
+      <TimeClockButton />
     </div>
   );
 }

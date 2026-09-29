@@ -71,7 +71,8 @@ async function fetchTiers(): Promise<Tier[]> {
     });
     if (!res.ok) return FALLBACK_TIERS;
     const json = (await res.json()) as { data?: Tier[] };
-    return json.data?.length ? json.data : FALLBACK_TIERS;
+    // API trả mảng (kể cả rỗng khi đã xoá hết gói) → dùng đúng dữ liệu; chỉ dự phòng khi lỗi
+    return Array.isArray(json.data) ? json.data : FALLBACK_TIERS;
   } catch {
     return FALLBACK_TIERS;
   }
@@ -79,6 +80,7 @@ async function fetchTiers(): Promise<Tier[]> {
 
 export async function PricingSection() {
   const tiers = await fetchTiers();
+  if (tiers.length === 0) return null;
 
   return (
     <section id="pricing" className="bg-slate-50/60 py-20">

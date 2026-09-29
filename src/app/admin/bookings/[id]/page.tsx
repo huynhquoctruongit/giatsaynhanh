@@ -13,8 +13,10 @@ import {
   PackageOpen,
   Pencil,
   PhoneCall,
+  Plus,
   Repeat,
   Trash2,
+  X,
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,11 +35,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/common/page-header';
 import { BookingStatusBadge } from '@/components/common/booking-status-badge';
-import { bookingApi } from '@/services/api/booking.api';
+import { bookingApi, type BookingItemPayload } from '@/services/api/booking.api';
+import { productApi } from '@/services/api/product.api';
 import { extractError } from '@/services/api/client';
 import { useAuth } from '@/hooks/use-auth';
 import { calcLineTotal, formatCurrency, formatDateTime } from '@/lib/utils';
 import { BookingStatus } from '@/helpers/enums/booking-status';
+
+// <input type="datetime-local"> dùng giờ địa phương dạng "YYYY-MM-DDTHH:mm"
+const pad2 = (n: number) => n.toString().padStart(2, '0');
+function toLocalInput(iso: string | null | undefined) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+const fromLocalInput = (v: string) => (v ? new Date(v).toISOString() : null);
+
+type EditItem = BookingItemPayload & { key: string };
+let itemKey = 0;
+const nextKey = () => `i${++itemKey}`;
 
 export default function BookingDetailPage({
   params,
@@ -54,6 +70,15 @@ export default function BookingDetailPage({
   const [editPhone, setEditPhone] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editNote, setEditNote] = useState('');
+  const [editPickupAt, setEditPickupAt] = useState('');
+  const [editDeliveryAt, setEditDeliveryAt] = useState('');
+  const [editItems, setEditItems] = useState<EditItem[]>([]);
+
+  const productsQuery = useQuery({
+    queryKey: ['products', 'active-all'],
+    queryFn: () => productApi.list({ isActive: true, pageSize: 100 }),
+    enabled: editOpen,
+  });
 
   const query = useQuery({
     queryKey: ['booking', id],
@@ -91,6 +116,17 @@ export default function BookingDetailPage({
         phone: editPhone,
         address: editAddress,
         note: editNote || null,
+        pickupAt: fromLocalInput(editPickupAt),
+        deliveryAt: fromLocalInput(editDeliveryAt),
+        // Đã chuyển đơn thì không sửa dịch vụ ở đây (sửa ở đơn hàng)
+        ...(query.data?.status === BookingStatus.CONVERTED
+          ? {}
+          : {
+              items: editItems.map(({ key: _key, ...i }) => ({
+                ...i,
+                weight: i.weight || undefined,
+              })),
+            }),
       }),
     onSuccess: () => {
       toast.success('Đã cập nhật đặt lịch');
@@ -117,6 +153,18 @@ export default function BookingDetailPage({
     setEditPhone(b.phone ?? '');
     setEditAddress(b.address ?? '');
     setEditNote(b.note ?? '');
+    setEditPickupAt(toLocalInput(b.pickupAt));
+    setEditDeliveryAt(toLocalInput(b.deliveryAt));
+    setEditItems(
+      b.items.map((i) => ({
+        key: nextKey(),
+        productId: i.productId ?? undefined,
+        name: i.name,
+        quantity: i.quantity,
+        weight: i.weight ? Number(i.weight) : undefined,
+        unitPrice: Number(i.unitPrice),
+      })),
+    );
     setEditOpen(true);
   }
 
@@ -194,21 +242,111 @@ export default function BookingDetailPage({
         }
       />
 
-      {/* Dialog sửa đặt lịch */}
+      {/* Dialog sửa đặt lịch (ADMIN) */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Sửa đặt lịch</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Số điện thoại</Label>
-              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Số điện thoại</Label>
+                <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Địa chỉ</Label>
+                <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Thời gian lấy đồ</Label>
+                <Input type="datetime-local" value={editPickupAt} onChange={(e) => setEditPickupAt(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Thời gian giao trả</Label>
+                <Input type="datetime-local" value={editDeliveryAt} onChange={(e) => setEditDeliveryAt(e.target.value)} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Địa chỉ</Label>
-              <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
-            </div>
+
+            {booking.status === BookingStatus.CONVERTED ? (
+              <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                Đặt lịch đã chuyển thành đơn — sửa dịch vụ ở đơn {booking.convertedOrder?.code}.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <Label>Dịch vụ</Label>
+                <div className="space-y-2">
+                  <div className="hidden grid-cols-[1fr_64px_72px_104px_32px] gap-2 px-1 text-xs text-muted-foreground sm:grid">
+                    <span>Tên</span><span>SL</span><span>Kg</span><span>Đơn giá</span><span />
+                  </div>
+                  {editItems.map((it) => {
+                    const set = (patch: Partial<EditItem>) =>
+                      setEditItems((list) => list.map((x) => (x.key === it.key ? { ...x, ...patch } : x)));
+                    return (
+                      <div key={it.key} className="grid grid-cols-[1fr_64px_72px_104px_32px] items-center gap-2">
+                        <Input value={it.name} onChange={(e) => set({ name: e.target.value })} />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={it.quantity}
+                          onChange={(e) => set({ quantity: Math.max(1, Number(e.target.value) || 1) })}
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          placeholder="—"
+                          value={it.weight ?? ''}
+                          onChange={(e) => set({ weight: e.target.value ? Number(e.target.value) : undefined })}
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1000}
+                          value={it.unitPrice}
+                          onChange={(e) => set({ unitPrice: Math.max(0, Number(e.target.value) || 0) })}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Bỏ dịch vụ"
+                          onClick={() => setEditItems((list) => list.filter((x) => x.key !== it.key))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-muted-foreground" />
+                  <select
+                    className="h-9 flex-1 rounded-md border bg-background px-2 text-sm"
+                    value=""
+                    onChange={(e) => {
+                      const p = productsQuery.data?.items.find((x) => x.id === e.target.value);
+                      if (!p) return;
+                      setEditItems((list) => [
+                        ...list,
+                        { key: nextKey(), productId: p.id, name: p.name, quantity: 1, unitPrice: Number(p.price) },
+                      ]);
+                    }}
+                  >
+                    <option value="">Thêm dịch vụ…</option>
+                    {productsQuery.data?.items.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — {formatCurrency(p.price)}/{p.unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-right text-sm">
+                  Tạm tính <b>{formatCurrency(editItems.reduce((s, i) => s + calcLineTotal(i), 0))}</b>
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Ghi chú</Label>
               <Textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={3} />
@@ -216,7 +354,14 @@ export default function BookingDetailPage({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Huỷ</Button>
-            <Button onClick={() => updateBooking.mutate()} disabled={updateBooking.isPending}>
+            <Button
+              onClick={() => updateBooking.mutate()}
+              disabled={
+                updateBooking.isPending ||
+                (booking.status !== BookingStatus.CONVERTED &&
+                  (editItems.length === 0 || editItems.some((i) => !i.name.trim())))
+              }
+            >
               {updateBooking.isPending ? 'Đang lưu…' : 'Lưu'}
             </Button>
           </DialogFooter>

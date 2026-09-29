@@ -1,9 +1,22 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { extractError } from '@/services/api/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -15,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/common/empty-state';
-import { timesheetApi, type TimesheetUser } from '@/services/api/timesheet.api';
+import { timesheetApi, type TimesheetEntry, type TimesheetUser } from '@/services/api/timesheet.api';
 import { cn } from '@/lib/utils';
 
 const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -26,11 +39,19 @@ const hhmm = (iso: string) => {
   const d = new Date(iso);
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 };
+// <input type="datetime-local"> dùng giờ địa phương "YYYY-MM-DDTHH:mm"
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
 const money = (v: number) => v.toLocaleString('vi-VN') + 'đ';
 const hours = (v: number) => `${v.toLocaleString('vi-VN')}h`;
 
 /** Thống kê chấm công (nút nổi trên app) theo tháng. ADMIN thấy mọi nhân viên, STAFF chỉ thấy mình. */
 export function TimesheetMonthly() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const [editing, setEditing] = useState<{ entry: TimesheetEntry; name: string } | null>(null);
   const [cursor, setCursor] = useState(() => new Date());
   const month = monthKey(cursor);
   const shiftMonth = (delta: number) =>
@@ -91,18 +112,111 @@ export function TimesheetMonthly() {
               </TableHeader>
               <TableBody>
                 {data.users.map((u) => (
-                  <UserRows key={u.userId} user={u} defaultOpen={data.users.length === 1} />
+                  <UserRows
+                    key={u.userId}
+                    user={u}
+                    defaultOpen={data.users.length === 1}
+                    onEdit={isAdmin ? (entry) => setEditing({ entry, name: u.name }) : undefined}
+                  />
                 ))}
               </TableBody>
             </Table>
           </>
         )}
       </CardContent>
+      {editing && (
+        <EditEntryDialog entry={editing.entry} name={editing.name} onClose={() => setEditing(null)} />
+      )}
     </Card>
   );
 }
 
-function UserRows({ user, defaultOpen }: { user: TimesheetUser; defaultOpen: boolean }) {
+/** ADMIN sửa giờ vào/ra hoặc xoá 1 ca chấm công. */
+function EditEntryDialog({ entry, name, onClose }: { entry: TimesheetEntry; name: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [checkIn, setCheckIn] = useState(toLocalInput(entry.checkIn));
+  const [checkOut, setCheckOut] = useState(entry.checkOut ? toLocalInput(entry.checkOut) : '');
+  const [open, setOpen] = useState(!entry.checkOut);
+
+  const done = (msg: string) => {
+    toast.success(msg);
+    qc.invalidateQueries({ queryKey: ['timesheet'] });
+    onClose();
+  };
+  const save = useMutation({
+    mutationFn: () =>
+      timesheetApi.update(entry.id, {
+        checkIn: new Date(checkIn).toISOString(),
+        checkOut: open ? null : new Date(checkOut).toISOString(),
+      }),
+    onSuccess: () => done('Đã sửa ca chấm công'),
+    onError: (err) => toast.error(extractError(err).message),
+  });
+  const remove = useMutation({
+    mutationFn: () => timesheetApi.remove(entry.id),
+    onSuccess: () => done('Đã xoá ca chấm công'),
+    onError: (err) => toast.error(extractError(err).message),
+  });
+  const invalid = !checkIn || (!open && (!checkOut || new Date(checkOut) <= new Date(checkIn)));
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sửa ca chấm công — {name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Giờ vào ca</Label>
+            <Input type="datetime-local" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Giờ kết ca</Label>
+            <Input
+              type="datetime-local"
+              value={checkOut}
+              disabled={open}
+              onChange={(e) => setCheckOut(e.target.value)}
+            />
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <Checkbox checked={open} onCheckedChange={setOpen} /> Chưa kết ca (đang làm)
+            </label>
+            {!open && checkOut && checkIn && new Date(checkOut) <= new Date(checkIn) && (
+              <p className="text-xs text-destructive">Giờ kết ca phải sau giờ vào ca</p>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">Giờ tính lương vẫn làm tròn 30 phút gần nhất.</p>
+        </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button
+            variant="outline"
+            className="border-destructive text-destructive hover:bg-destructive/10"
+            disabled={remove.isPending}
+            onClick={() => window.confirm(`Xoá ca chấm công này của ${name}?`) && remove.mutate()}
+          >
+            <Trash2 className="h-4 w-4" /> Xoá ca
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Huỷ</Button>
+            <Button onClick={() => save.mutate()} disabled={invalid || save.isPending}>
+              {save.isPending ? 'Đang lưu…' : 'Lưu'}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function UserRows({
+  user,
+  defaultOpen,
+  onEdit,
+}: {
+  user: TimesheetUser;
+  defaultOpen: boolean;
+  onEdit?: (entry: TimesheetEntry) => void;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Fragment>
@@ -138,7 +252,13 @@ function UserRows({ user, defaultOpen }: { user: TimesheetUser; defaultOpen: boo
               <TableCell className="text-right">
                 {e.roundedOut ? money(e.amount) : <span className="text-emerald-600">Đang làm</span>}
               </TableCell>
-              <TableCell />
+              <TableCell>
+                {onEdit && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Sửa / xoá ca" onClick={() => onEdit(e)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </TableCell>
             </TableRow>
           );
         })}

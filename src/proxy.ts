@@ -16,7 +16,7 @@ export function proxy(req: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.startsWith('/favicon') ||
     // file tĩnh (ảnh OG, favicon svg, …) — cho qua để share link & favicon hoạt động
-    /\.(jpg|jpeg|png|gif|svg|ico|webp|txt|xml|woff2?)$/i.test(pathname) ||
+    /\.(jpg|jpeg|png|gif|svg|ico|webp|txt|xml|woff2?|webmanifest)$/i.test(pathname) ||
     // '/<shopSlug>/dat-don' — slug động theo từng tiệm, không phải prefix cố định
     /^\/[^/]+\/dat-don$/.test(pathname) ||
     PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

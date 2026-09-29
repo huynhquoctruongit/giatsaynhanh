@@ -112,20 +112,20 @@ export default function DashboardPage() {
       />
 
       {/* Stats row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         {stats.map((s) => {
           const Icon = s.icon;
           const isFinancial = s.isCurrency;
           return (
             <Card key={s.label}>
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.color}`}>
+              <CardContent className="flex flex-col items-start gap-2 p-3 md:flex-row md:items-center md:gap-4 md:p-6">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl md:h-12 md:w-12 ${s.color}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">{s.label}</p>
+                  <p className="text-xs text-muted-foreground md:text-sm">{s.label}</p>
                   <div className="flex items-center gap-2">
-                    <p className="text-2xl font-bold">
+                    <p className="whitespace-nowrap text-lg font-bold md:text-2xl">
                       {dashboardQuery.isLoading
                         ? '—'
                         : isFinancial && !showFinancial

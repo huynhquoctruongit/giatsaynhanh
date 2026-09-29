@@ -503,7 +503,10 @@ export default function PlatformShopsPage() {
               </p>
             )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {ACTIVATABLE_PLANS.map(({ plan, hint }) => (
+              {ACTIVATABLE_PLANS.filter(
+                // Gói đã xoá ở /platform/plans thì không cho chọn
+                ({ plan }) => plan === 'TRIAL' || plansQuery.data?.find((p) => p.plan === plan)?.isActive !== false,
+              ).map(({ plan, hint }) => (
                 <button
                   key={plan}
                   type="button"

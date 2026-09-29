@@ -599,6 +599,14 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
               <div className="flex items-center gap-3">
                 <CardTitle>Thông tin đơn</CardTitle>
                 <OrderStatusBadge status={order.status} />
+                {Number(order.transferredAmount ?? 0) > 0 && (
+                  <span
+                    className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                    title="Tự khớp từ chuyển khoản QR hoá đơn"
+                  >
+                    Đã CK {formatCurrency(Number(order.transferredAmount))}
+                  </span>
+                )}
                 {order.fromBooking && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
                     <Truck className="h-3 w-3" /> Đặt lịch
@@ -755,7 +763,7 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
             </CardHeader>
             <CardContent className="p-0">
               {/* Receipt preview */}
-              <div className="flex justify-center border-t bg-white px-3 py-3">
+              <div className="flex justify-center overflow-x-auto border-t bg-white px-3 py-3">
                 {settingsQuery.isLoading || orderQuery.isLoading ? (
                   <Skeleton className="h-64 w-full" />
                 ) : settings ? (
