@@ -17,8 +17,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { reportApi } from '@/services/api/report.api';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { ORDER_STATUS_LABEL } from '@/helpers/enums/order-status';
+import { ServiceStats } from './components/service-stats';
 
 // Định dạng ngày theo GIỜ ĐỊA PHƯƠNG (không dùng toISOString để tránh lệch ngày
 // với máy ở múi giờ +7).
@@ -73,7 +74,39 @@ function DailyBarChart({ data }: { data: { date: string; amount: number }[] }) {
   );
 }
 
+type ReportTab = 'sales' | 'services';
+
 export default function ReportsPage() {
+  const [tab, setTab] = useState<ReportTab>('sales');
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Báo cáo bán hàng" description="Tổng hợp doanh số theo khoảng thời gian và theo dịch vụ" />
+      <div className="flex w-fit items-center gap-1 rounded-lg border bg-background p-1">
+        {(
+          [
+            { v: 'sales', label: 'Tổng quan' },
+            { v: 'services', label: 'Theo dịch vụ' },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.v}
+            type="button"
+            onClick={() => setTab(t.v)}
+            className={cn(
+              'rounded-md px-4 py-1.5 text-sm font-semibold transition',
+              tab === t.v ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {tab === 'sales' ? <SalesOverview /> : <ServiceStats />}
+    </div>
+  );
+}
+
+function SalesOverview() {
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -114,7 +147,6 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Báo cáo bán hàng" description="Tổng hợp doanh số theo khoảng thời gian" />
 
       {/* Bộ lọc ngày */}
       <div className="flex flex-wrap items-center gap-2">
