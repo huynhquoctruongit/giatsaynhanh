@@ -350,6 +350,7 @@ export default function SettingsPage() {
   const [invoiceShowDebt, setInvoiceShowDebt] = useState(true);
   const [openingHours, setOpeningHours] = useState('');
   const [invoiceNote, setInvoiceNote] = useState('');
+  const [smallOrderNote, setSmallOrderNote] = useState('');
   const [bankBin, setBankBin] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
@@ -386,6 +387,7 @@ export default function SettingsPage() {
     setInvoiceShowDebt(d.invoiceShowDebt ?? true);
     setOpeningHours(d.openingHours ?? '');
     setInvoiceNote(d.invoiceNote ?? '');
+    setSmallOrderNote(d.smallOrderNote ?? '');
     setBankBin(d.bankBin ?? '');
     setBankAccountNumber(d.bankAccountNumber ?? '');
     setBankAccountName(d.bankAccountName ?? '');
@@ -434,6 +436,7 @@ export default function SettingsPage() {
       invoiceShowQR, invoiceShowDebt,
       openingHours: openingHours || null,
       invoiceNote: invoiceNote || null,
+      smallOrderNote: smallOrderNote.trim() || null,
       bankBin: bankBin || null,
       bankAccountNumber: bankAccountNumber || null,
       bankAccountName: bankAccountName || null,
@@ -573,6 +576,18 @@ export default function SettingsPage() {
                       placeholder={'VỆ SINH GIÀY SẠCH\nGIẶT TOPPER\nMỀN DÀY BAO SẠCH VÀ THƠM'}
                     />
                     <p className="text-xs text-muted-foreground">Hiện trong khung viền đen ở cuối hóa đơn. Để trống sẽ không hiện khung này.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Thông báo cho đơn &quot;Dưới 3kg&quot;</Label>
+                    <Textarea
+                      rows={3}
+                      value={smallOrderNote}
+                      onChange={(e) => setSmallOrderNote(e.target.value)}
+                      placeholder="Từ ngày 01/10, tiệm áp dụng giá tối thiểu 30.000đ/đơn cho đơn dưới 3kg…"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Đơn có dịch vụ &quot;Dưới 3kg&quot; sẽ in dòng chữ nhỏ này thay cho khung ghi chú. Các đơn khác in khung như cũ. Để trống thì mọi đơn in khung như bình thường.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

@@ -60,6 +60,17 @@ export function calcLineTotal(item: {
   return qty * price;
 }
 
+// Dịch vụ "Dưới 3kg" (giá tối thiểu 30k từ 01/10) — so tên không phân biệt hoa/thường, khoảng trắng.
+const SMALL_ORDER_SERVICE_RE = /^dưới\s*3\s*kg$/i;
+
+/**
+ * Đơn có dịch vụ "Dưới 3kg" → in thông báo đơn tối thiểu thay cho khung quảng cáo.
+ * Mọi đơn khác (kể cả "Dưới 2,5kg") giữ nguyên hoá đơn như cũ.
+ */
+export function isSmallOrder(items: { name: string }[]): boolean {
+  return items.some((it) => SMALL_ORDER_SERVICE_RE.test(it.name.normalize('NFC').trim()));
+}
+
 /** Đuôi mã đơn (phần sau dấu '-' cuối). VD "LD-20260531-FSRNX" → "FSRNX". */
 export function orderCodeSuffix(code: string): string {
   const parts = code.split('-');

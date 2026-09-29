@@ -19,7 +19,7 @@ import { orderApi } from '@/services/api/order.api';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
 import { calcInvoiceTotals } from '@/lib/invoice-totals';
-import { calcLineTotal, formatCurrency, formatDateTime, orderCodeSuffix } from '@/lib/utils';
+import { calcLineTotal, formatCurrency, formatDateTime, isSmallOrder, orderCodeSuffix } from '@/lib/utils';
 import {
   NEXT_STATUS_TRANSITIONS,
   ORDER_STATUS_LABEL,
@@ -97,6 +97,8 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
   const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
+  // Đơn dưới 3kg → in thông báo nhỏ (vd đơn tối thiểu) thay cho khung ghi chú
+  const smallNote = settings.smallOrderNote?.trim() && isSmallOrder(order.items) ? settings.smallOrderNote.trim() : null;
 
   const itemsHtml = order.items
     .map((it, idx) => {
@@ -198,7 +200,8 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>
 
-  ${settings.invoiceNote ? `<div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
+  ${smallNote ? `<p style="margin:6px 10px 4px;text-align:center;font-size:${sm}px;line-height:1.5">${smallNote.split('\n').join('<br/>')}</p>`
+  : settings.invoiceNote ? `<div style="margin:8px 10px 4px;padding:8px;border:2px solid #000;border-radius:6px;text-align:center">
     <p style="font-weight:900;font-size:${base}px;line-height:1.6">${settings.invoiceNote.split('\n').join('<br/>')}</p>
   </div>` : ''}
 
@@ -276,6 +279,8 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
   const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
+  // Đơn dưới 3kg → in thông báo nhỏ (vd đơn tối thiểu) thay cho khung ghi chú
+  const smallNote = settings.smallOrderNote?.trim() && isSmallOrder(order.items) ? settings.smallOrderNote.trim() : null;
 
   return (
     <div style={{ fontFamily: 'monospace', fontSize: base, color: '#000', width: 219, margin: '0 auto', lineHeight: 1.4 }}>
@@ -391,8 +396,13 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
         </div>
       </div>
 
-      {/* Ghi chú hoá đơn (riêng từng tiệm) — ngay sau tổng tiền, trước mã QR */}
-      {settings.invoiceNote && (
+      {/* Ghi chú hoá đơn (riêng từng tiệm) — ngay sau tổng tiền, trước mã QR.
+          Đơn dưới 3kg: thay bằng dòng thông báo nhỏ, không khung. */}
+      {smallNote ? (
+        <p style={{ margin: '6px 10px 4px', textAlign: 'center', fontSize: sm, lineHeight: 1.5, whiteSpace: 'pre-line' }}>
+          {smallNote}
+        </p>
+      ) : settings.invoiceNote && (
         <div style={{ margin: '8px 10px 4px', padding: 8, border: '2px solid #000', borderRadius: 6, textAlign: 'center' }}>
           <p style={{ fontWeight: 900, fontSize: base, lineHeight: 1.6 }}>
             {settings.invoiceNote.split('\n').map((line, i, arr) => (

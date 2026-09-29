@@ -22,6 +22,7 @@ export interface ShopSettings {
   invoiceShowDebt: boolean;
   openingHours: string | null;
   invoiceNote: string | null;
+  smallOrderNote: string | null;
   bankBin: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;
