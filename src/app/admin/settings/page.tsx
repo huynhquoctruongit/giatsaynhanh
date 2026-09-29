@@ -351,6 +351,7 @@ export default function SettingsPage() {
   const [openingHours, setOpeningHours] = useState('');
   const [invoiceNote, setInvoiceNote] = useState('');
   const [smallOrderNote, setSmallOrderNote] = useState('');
+  const [openingCash, setOpeningCash] = useState('750000');
   const [bankBin, setBankBin] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
@@ -388,6 +389,7 @@ export default function SettingsPage() {
     setOpeningHours(d.openingHours ?? '');
     setInvoiceNote(d.invoiceNote ?? '');
     setSmallOrderNote(d.smallOrderNote ?? '');
+    setOpeningCash(String(Number(d.openingCash ?? 750000)));
     setBankBin(d.bankBin ?? '');
     setBankAccountNumber(d.bankAccountNumber ?? '');
     setBankAccountName(d.bankAccountName ?? '');
@@ -437,6 +439,7 @@ export default function SettingsPage() {
       openingHours: openingHours || null,
       invoiceNote: invoiceNote || null,
       smallOrderNote: smallOrderNote.trim() || null,
+      openingCash: Number(openingCash) || 0,
       bankBin: bankBin || null,
       bankAccountNumber: bankAccountNumber || null,
       bankAccountName: bankAccountName || null,
@@ -576,6 +579,18 @@ export default function SettingsPage() {
                       placeholder={'VỆ SINH GIÀY SẠCH\nGIẶT TOPPER\nMỀN DÀY BAO SẠCH VÀ THƠM'}
                     />
                     <p className="text-xs text-muted-foreground">Hiện trong khung viền đen ở cuối hóa đơn. Để trống sẽ không hiện khung này.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tiền đầu ngày trong két</Label>
+                    <Input
+                      inputMode="numeric"
+                      value={openingCash ? Number(openingCash).toLocaleString('vi-VN') : ''}
+                      onChange={(e) => setOpeningCash(e.target.value.replace(/\D/g, ''))}
+                      placeholder="750.000"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Tiền lẻ để sẵn trong két mỗi sáng. Dùng khi chốt két: tiền mặt phải có = tiền đầu ngày + đã thu − chuyển khoản − chi phí.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Thông báo cho đơn &quot;Dưới 3kg&quot;</Label>

@@ -23,6 +23,8 @@ export interface ShopSettings {
   openingHours: string | null;
   invoiceNote: string | null;
   smallOrderNote: string | null;
+  /** Tiền lẻ để sẵn trong két đầu ngày (mặc định 750k) — dùng khi chốt két */
+  openingCash: number | string;
   bankBin: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;

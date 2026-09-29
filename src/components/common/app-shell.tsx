@@ -22,6 +22,7 @@ import {
   UserCog,
   CalendarClock,
   HandCoins,
+  Banknote,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { SubscriptionBanner } from '@/components/common/subscription-banner';
@@ -50,6 +51,7 @@ const NAV_ITEMS = [
   { href: '/admin/finance', label: 'Thu chi', icon: Wallet },
   { href: '/admin/debts', label: 'Sổ nợ', icon: BookOpen },
   { href: '/admin/shifts', label: 'Ca làm việc', icon: Clock },
+  { href: '/admin/cash-closing', label: 'Chốt két', icon: Banknote },
   { href: '/admin/reports', label: 'Báo cáo', icon: BarChart2 },
   { href: '/admin/scanner', label: 'Quét QR', icon: ScanLine },
 ];
