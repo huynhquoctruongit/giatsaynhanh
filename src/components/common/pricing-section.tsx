@@ -64,6 +64,14 @@ function formatVnd(v: number) {
   return v.toLocaleString('vi-VN') + 'đ';
 }
 
+// Số cột theo số gói đang bán → luôn trải đều, căn giữa (class viết đủ để Tailwind nhận).
+const GRID_BY_COUNT: Record<number, string> = {
+  1: 'mx-auto max-w-sm',
+  2: 'mx-auto max-w-3xl md:grid-cols-2',
+  3: 'md:grid-cols-2 lg:grid-cols-3',
+  4: 'md:grid-cols-2 lg:grid-cols-4',
+};
+
 async function fetchTiers(): Promise<Tier[]> {
   try {
     const res = await fetch(`${PLATFORM_API_BASE_URL}/platform/public/plans`, {
@@ -90,7 +98,7 @@ export async function PricingSection() {
           <p className="mt-3 text-slate-600">Chọn gói theo thời hạn cam kết — cam kết càng dài, ưu đãi càng lớn.</p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className={`mt-12 grid gap-6 ${GRID_BY_COUNT[tiers.length] ?? GRID_BY_COUNT[4]}`}>
           {tiers.map((tier) => (
             <div
               key={tier.name}
@@ -108,11 +116,11 @@ export async function PricingSection() {
               <h3 className="text-lg font-bold">{tier.name}</h3>
               <p className="mt-1 text-sm text-slate-500">{tier.description}</p>
 
-              <div className="mt-6 flex items-baseline gap-1.5">
+              <div className="mt-6 flex flex-wrap items-baseline gap-x-1.5">
                 {tier.price > 0 ? (
                   <>
-                    <span className="text-3xl font-extrabold tracking-tight">{formatVnd(tier.price)}</span>
-                    <span className="text-sm text-slate-500">{tier.period}</span>
+                    <span className="whitespace-nowrap text-3xl font-extrabold tracking-tight">{formatVnd(tier.price)}</span>
+                    <span className="whitespace-nowrap text-sm text-slate-500">{tier.period}</span>
                   </>
                 ) : (
                   // Giá 0 = chưa công bố giá
