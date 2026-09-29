@@ -352,6 +352,7 @@ export default function SettingsPage() {
   const [invoiceNote, setInvoiceNote] = useState('');
   const [smallOrderNote, setSmallOrderNote] = useState('');
   const [openingCash, setOpeningCash] = useState('750000');
+  const [defaultExpenses, setDefaultExpenses] = useState('25000');
   const [bankBin, setBankBin] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
@@ -390,6 +391,7 @@ export default function SettingsPage() {
     setInvoiceNote(d.invoiceNote ?? '');
     setSmallOrderNote(d.smallOrderNote ?? '');
     setOpeningCash(String(Number(d.openingCash ?? 750000)));
+    setDefaultExpenses(String(Number(d.defaultExpenses ?? 25000)));
     setBankBin(d.bankBin ?? '');
     setBankAccountNumber(d.bankAccountNumber ?? '');
     setBankAccountName(d.bankAccountName ?? '');
@@ -440,6 +442,7 @@ export default function SettingsPage() {
       invoiceNote: invoiceNote || null,
       smallOrderNote: smallOrderNote.trim() || null,
       openingCash: Number(openingCash) || 0,
+      defaultExpenses: Number(defaultExpenses) || 0,
       bankBin: bankBin || null,
       bankAccountNumber: bankAccountNumber || null,
       bankAccountName: bankAccountName || null,
@@ -591,6 +594,16 @@ export default function SettingsPage() {
                     <p className="text-xs text-muted-foreground">
                       Tiền lẻ để sẵn trong két mỗi sáng. Dùng khi chốt két: tiền mặt phải có = tiền đầu ngày + đã thu − chuyển khoản − chi phí.
                     </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Chi phí mặc định mỗi ngày (đá, cf ông Địa…)</Label>
+                    <Input
+                      inputMode="numeric"
+                      value={defaultExpenses ? Number(defaultExpenses).toLocaleString('vi-VN') : ''}
+                      onChange={(e) => setDefaultExpenses(e.target.value.replace(/\D/g, ''))}
+                      placeholder="25.000"
+                    />
+                    <p className="text-xs text-muted-foreground">Điền sẵn vào ô chi phí khi chốt két — nhân viên vẫn sửa được.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Thông báo cho đơn &quot;Dưới 3kg&quot;</Label>

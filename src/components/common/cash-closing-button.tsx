@@ -1,0 +1,332 @@
+'use client';
+
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  LockKeyhole,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cashClosingApi, type CashClosing } from '@/services/api/cash-closing.api';
+import { extractError } from '@/services/api/client';
+import { useAuth } from '@/hooks/use-auth';
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils';
+
+const pad2 = (n: number) => n.toString().padStart(2, '0');
+const dm = (date: string) => date.split('-').reverse().slice(0, 2).join('/');
+/** "1250000" → "1.250.000" (hiển thị trong ô nhập) */
+const fmtInput = (digits: string) => (digits ? Number(digits).toLocaleString('vi-VN') : '');
+const onlyDigits = (v: string) => v.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+
+function diffTone(diff: number) {
+  if (diff === 0) return { cls: 'bg-emerald-50 text-emerald-700', text: 'Két khớp', Icon: CheckCircle2 };
+  if (diff < 0) return { cls: 'bg-rose-50 text-rose-700', text: `Thiếu ${formatCurrency(-diff)}`, Icon: AlertCircle };
+  return { cls: 'bg-amber-50 text-amber-800', text: `Dư ${formatCurrency(diff)}`, Icon: AlertTriangle };
+}
+
+function Line({ label, value, muted, strong }: { label: string; value: string; muted?: boolean; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-0.5">
+      <span className={cn('text-sm text-muted-foreground', strong && 'font-semibold text-foreground')}>{label}</span>
+      <span className={cn('font-medium', muted && 'text-muted-foreground', strong && 'font-bold')}>{value}</span>
+    </div>
+  );
+}
+
+/** Nút tròn nổi góc trên phải mọi trang quản lý → popup chốt két cuối ngày. */
+export function CashClosingButton() {
+  const [open, setOpen] = useState(false);
+  const preview = useQuery({
+    queryKey: ['cash-closing', 'preview'],
+    queryFn: () => cashClosingApi.preview(),
+    staleTime: 60_000,
+  });
+  const closed = Boolean(preview.data?.closing);
+
+  return (
+    <>
+      <button
+        type="button"
+        title="Chốt két"
+        aria-label="Chốt két"
+        onClick={() => {
+          preview.refetch();
+          setOpen(true);
+        }}
+        className="fixed right-4 top-[4.5rem] z-[15] flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700 active:scale-95 md:right-8 md:top-20"
+      >
+        <Wallet className="h-7 w-7" />
+        {closed && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
+            <Check className="h-3 w-3" />
+          </span>
+        )}
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Chốt két</DialogTitle>
+          </DialogHeader>
+          {open && <ClosingBody />}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function ClosingBody() {
+  const qc = useQueryClient();
+  const query = useQuery({ queryKey: ['cash-closing', 'preview'], queryFn: () => cashClosingApi.preview() });
+  const p = query.data;
+
+  const [expenses, setExpenses] = useState<string | null>(null); // null = chưa sửa → dùng mặc định
+  const [counted, setCounted] = useState('');
+  const [note, setNote] = useState('');
+
+  const expenseDigits = expenses ?? String(p?.defaultExpenses ?? 0);
+  const expenseNum = Number(expenseDigits) || 0;
+  const expected = (p?.expectedBeforeExpenses ?? 0) - expenseNum;
+  const countedNum = Number(counted) || 0;
+  const diff = countedNum - expected;
+  const tone = diffTone(diff);
+
+  const submit = useMutation({
+    mutationFn: () => cashClosingApi.create({ countedCash: countedNum, expenses: expenseNum, note: note.trim() || undefined }),
+    onSuccess: () => {
+      toast.success('Đã chốt két — đã báo chủ tiệm');
+      qc.invalidateQueries({ queryKey: ['cash-closing'] });
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+
+  if (query.isLoading || !p) {
+    return (
+      <div className="flex justify-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (p.closing) {
+    return (
+      <div className="space-y-4">
+        <ClosedSummary c={p.closing} />
+        <ClosingBook />
+      </div>
+    );
+  }
+
+  const confirmSubmit = () => {
+    if (!counted) return toast.error('Nhập số tiền mặt đếm được trong két');
+    if (diff !== 0 && !note.trim()) return toast.error('Két lệch tiền — vui lòng ghi lý do');
+    if (window.confirm(`Chốt két hôm nay?\nKét đếm ${formatCurrency(countedNum)} — ${tone.text.toLowerCase()}.`)) {
+      submit.mutate();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-muted-foreground">Ngày {dm(p.date)}</p>
+      <div>
+        <Line label="Tiền đầu ngày" value={formatCurrency(p.openingCash)} />
+        <Line label={`+ Đã thu (${p.orderCount} đơn)`} value={formatCurrency(p.collected)} />
+        <Line label={`− Chuyển khoản (${p.transferCount} GD)`} value={formatCurrency(p.transfers)} muted />
+        <div className="flex items-center justify-between gap-4 py-0.5">
+          <span className="text-sm text-muted-foreground">− Chi phí (đá, cf ông Địa…)</span>
+          <Input
+            className="h-9 w-32 text-right"
+            inputMode="numeric"
+            value={fmtInput(expenseDigits)}
+            onChange={(e) => setExpenses(onlyDigits(e.target.value))}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-4 border-t pt-3">
+        <span className="font-semibold">= Tiền mặt phải có trong két</span>
+        <span className="text-2xl font-extrabold">{formatCurrency(expected)}</span>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="counted-cash" className="text-sm font-semibold">
+          Tiền mặt đếm được trong két
+        </label>
+        <div className="flex items-center rounded-xl border-2 border-primary px-4 focus-within:ring-2 focus-within:ring-primary/30">
+          <input
+            id="counted-cash"
+            autoFocus
+            inputMode="numeric"
+            placeholder="0"
+            value={fmtInput(counted)}
+            onChange={(e) => setCounted(onlyDigits(e.target.value))}
+            className="w-full bg-transparent py-3 text-right text-3xl font-extrabold tabular-nums outline-none"
+          />
+          <span className="ml-1 text-2xl font-bold text-muted-foreground">đ</span>
+        </div>
+      </div>
+
+      <div className={cn('flex items-center justify-center gap-2 rounded-xl p-4 text-xl font-extrabold', counted ? tone.cls : 'bg-muted text-muted-foreground')}>
+        {counted ? (
+          <>
+            <tone.Icon className="h-6 w-6" /> {tone.text}
+          </>
+        ) : (
+          'Nhập số tiền đếm được'
+        )}
+      </div>
+
+      {counted && diff !== 0 && (
+        <Textarea
+          rows={2}
+          placeholder="Lý do lệch (bắt buộc) — vd: thối nhầm, khách thiếu 2k…"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+      )}
+      {counted && (
+        <p className="text-sm text-muted-foreground">
+          Để lại {formatCurrency(p.openingCash)} trong két cho ngày mai, nộp{' '}
+          <b>{formatCurrency(Math.max(0, countedNum - p.openingCash))}</b> cho chủ tiệm.
+        </p>
+      )}
+      <Button size="lg" className="w-full bg-indigo-600 text-base hover:bg-indigo-700" onClick={confirmSubmit} disabled={submit.isPending}>
+        {submit.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <LockKeyhole className="h-5 w-5" />} Chốt két
+      </Button>
+    </div>
+  );
+}
+
+function ClosedSummary({ c }: { c: CashClosing }) {
+  const t = diffTone(Number(c.difference));
+  return (
+    <div className="space-y-2 rounded-xl bg-muted/50 p-4">
+      <p className="flex items-center gap-2 font-bold">
+        <LockKeyhole className="h-5 w-5 text-emerald-600" /> Đã chốt két ngày {dm(c.date)}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        {c.closedBy.name} chốt lúc {formatDateTime(c.createdAt)}
+      </p>
+      <Line label="Phải có trong két" value={formatCurrency(Number(c.expectedCash))} />
+      <Line label="Két đếm được" value={formatCurrency(Number(c.countedCash))} strong />
+      <div className={cn('flex items-center justify-center gap-2 rounded-lg p-3 text-lg font-bold', t.cls)}>
+        <t.Icon className="h-5 w-5" /> {t.text}
+      </div>
+      {c.note && <p className="text-sm text-muted-foreground">Lý do: {c.note}</p>}
+    </div>
+  );
+}
+
+/** Sổ chốt két theo tháng — hiện ngay sau khi chốt. Chủ tiệm xoá được để chốt lại. */
+function ClosingBook() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const [cursor, setCursor] = useState(() => new Date());
+  const [openId, setOpenId] = useState<string | null>(null);
+  const month = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}`;
+  const query = useQuery({ queryKey: ['cash-closing', 'list', month], queryFn: () => cashClosingApi.list(month) });
+  const remove = useMutation({
+    mutationFn: (id: string) => cashClosingApi.remove(id),
+    onSuccess: () => {
+      toast.success('Đã xoá — có thể chốt lại');
+      qc.invalidateQueries({ queryKey: ['cash-closing'] });
+    },
+    onError: (err) => toast.error(extractError(err).message),
+  });
+  const data = query.data;
+  const shift = (delta: number) => {
+    setOpenId(null);
+    setCursor((d) => new Date(d.getFullYear(), d.getMonth() + delta, 1));
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="font-bold">Sổ chốt két</p>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shift(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold">
+            {pad2(cursor.getMonth() + 1)}/{cursor.getFullYear()}
+          </span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => shift(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {query.isLoading ? (
+        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+      ) : !data || data.items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chưa có ngày nào chốt két trong tháng.</p>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            {data.totals.days} ngày · tổng lệch {formatCurrency(data.totals.difference)} ({data.totals.mismatchDays} ngày lệch)
+          </p>
+          <div className="space-y-2">
+            {data.items.map((c) => {
+              const t = diffTone(Number(c.difference));
+              const expanded = openId === c.id;
+              return (
+                <div key={c.id} className="overflow-hidden rounded-lg border">
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(expanded ? null : c.id)}
+                    className="flex w-full items-center gap-2 p-3 text-left hover:bg-muted/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">
+                        {dm(c.date)} · {c.closedBy.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Két {formatCurrency(Number(c.countedCash))} / phải có {formatCurrency(Number(c.expectedCash))}
+                      </p>
+                    </div>
+                    <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold', t.cls)}>{t.text}</span>
+                  </button>
+                  {expanded && (
+                    <div className="space-y-1 border-t bg-muted/30 p-3">
+                      <Line label="Tiền đầu ngày" value={formatCurrency(Number(c.openingCash))} />
+                      <Line label="+ Đã thu" value={formatCurrency(Number(c.collected))} />
+                      <Line label="− Chuyển khoản" value={formatCurrency(Number(c.transfers))} muted />
+                      <Line label="− Chi phí" value={formatCurrency(Number(c.expenses))} muted />
+                      <p className="text-xs text-muted-foreground">Chốt lúc {formatDateTime(c.createdAt)}</p>
+                      {c.note && <p className="text-sm text-muted-foreground">Lý do: {c.note}</p>}
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 border-destructive text-destructive hover:bg-destructive/10"
+                          disabled={remove.isPending}
+                          onClick={() =>
+                            window.confirm(`Xoá lần chốt két ngày ${dm(c.date)}? Nhân viên sẽ chốt lại được ngày này.`) &&
+                            remove.mutate(c.id)
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" /> Xoá để chốt lại
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

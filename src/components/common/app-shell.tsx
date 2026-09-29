@@ -22,11 +22,11 @@ import {
   UserCog,
   CalendarClock,
   HandCoins,
-  Banknote,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { SubscriptionBanner } from '@/components/common/subscription-banner';
 import { TimeClockButton } from '@/components/common/time-clock-button';
+import { CashClosingButton } from '@/components/common/cash-closing-button';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,7 +51,6 @@ const NAV_ITEMS = [
   { href: '/admin/finance', label: 'Thu chi', icon: Wallet },
   { href: '/admin/debts', label: 'Sổ nợ', icon: BookOpen },
   { href: '/admin/shifts', label: 'Ca làm việc', icon: Clock },
-  { href: '/admin/cash-closing', label: 'Chốt két', icon: Banknote },
   { href: '/admin/reports', label: 'Báo cáo', icon: BarChart2 },
   { href: '/admin/scanner', label: 'Quét QR', icon: ScanLine },
 ];
@@ -180,6 +179,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Nút chấm công nổi trên mọi trang quản lý */}
       <TimeClockButton />
+      {/* Nút chốt két nổi góc trên phải */}
+      <CashClosingButton />
     </div>
   );
 }
