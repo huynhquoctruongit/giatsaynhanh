@@ -145,6 +145,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </Button>
           <p className="min-w-0 flex-1 truncate text-lg font-bold md:hidden">{currentLabel}</p>
+          {/* Màn hình rộng / POS: nút Chốt két ở giữa header */}
+          <div className="hidden flex-1 md:block" />
+          <CashClosingButton placement="header" />
           <div className="hidden flex-1 md:block" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -179,8 +182,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Nút chấm công nổi trên mọi trang quản lý */}
       <TimeClockButton />
-      {/* Nút chốt két nổi góc trên phải */}
-      <CashClosingButton />
+      {/* Điện thoại: nút chốt két nổi ngay trên nút Vào ca */}
+      <CashClosingButton placement="fab" />
     </div>
   );
 }

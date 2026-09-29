@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -45,9 +46,17 @@ function Line({ label, value, muted, strong }: { label: string; value: string; m
   );
 }
 
-/** Nút tròn nổi góc trên phải mọi trang quản lý → popup chốt két cuối ngày. */
-export function CashClosingButton() {
+// Trang có thanh nút cố định ở đáy (vd "Tạo đơn") → ẩn nút nổi trên điện thoại
+const HIDE_FAB_ON = ['/admin/orders/new'];
+
+/**
+ * Nút mở popup chốt két cuối ngày.
+ *  - placement="header": nút giữa thanh header (màn hình rộng / POS)
+ *  - placement="fab": nút tròn nổi ngay trên nút "Vào ca" (điện thoại)
+ */
+export function CashClosingButton({ placement }: { placement: 'header' | 'fab' }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const preview = useQuery({
     queryKey: ['cash-closing', 'preview'],
     queryFn: () => cashClosingApi.preview(),
@@ -55,25 +64,43 @@ export function CashClosingButton() {
   });
   const closed = Boolean(preview.data?.closing);
 
+  const openDialog = () => {
+    preview.refetch();
+    setOpen(true);
+  };
+  const doneBadge = closed && (
+    <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
+      <Check className="h-3 w-3" />
+    </span>
+  );
+
+  if (placement === 'fab' && HIDE_FAB_ON.some((p) => pathname.startsWith(p))) return null;
+
   return (
     <>
-      <button
-        type="button"
-        title="Chốt két"
-        aria-label="Chốt két"
-        onClick={() => {
-          preview.refetch();
-          setOpen(true);
-        }}
-        className="fixed right-4 top-[4.5rem] z-[15] flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700 active:scale-95 md:right-8 md:top-20"
-      >
-        <Wallet className="h-7 w-7" />
-        {closed && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
-            <Check className="h-3 w-3" />
-          </span>
-        )}
-      </button>
+      {placement === 'header' ? (
+        <button
+          type="button"
+          onClick={openDialog}
+          className="relative hidden h-11 items-center gap-2 rounded-full bg-indigo-600 px-5 font-semibold text-white shadow-md transition hover:bg-indigo-700 active:scale-95 md:inline-flex"
+        >
+          <Wallet className="h-5 w-5" />
+          {closed ? 'Đã chốt két' : 'Chốt két'}
+          {doneBadge}
+        </button>
+      ) : (
+        <button
+          type="button"
+          title="Chốt két"
+          aria-label="Chốt két"
+          onClick={openDialog}
+          // Ngay trên nút "Vào ca" (bottom-6, cao 3.5rem) — chỉ hiện trên điện thoại
+          className="fixed bottom-[5.75rem] right-5 z-[15] mb-[env(safe-area-inset-bottom)] flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700 active:scale-95 md:hidden"
+        >
+          <Wallet className="h-7 w-7" />
+          {doneBadge}
+        </button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
