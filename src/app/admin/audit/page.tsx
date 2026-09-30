@@ -170,6 +170,8 @@ export default function AuditPage() {
             value={scanValue}
             onChange={(e) => setScanValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            // Ô này tự nhận mã quét → máy quét toàn cục không can thiệp
+            data-scan-own
             onBlur={() => setTimeout(() => inputRef.current?.focus(), 50)}
             autoFocus
           />

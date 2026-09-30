@@ -13,6 +13,17 @@ import type { Order } from '@/types/api';
 // trước khi timer này bắn thì coi là 1 lần quét; ngược lại là gõ tay bình
 // thường → bỏ qua.
 const SCAN_DEBOUNCE_MS = 100;
+// Trong ô nhập (vd ô tìm kiếm trang Đơn hàng): máy quét vẫn gõ vào ô đó. Nhận ra máy quét
+// khi các phím cách nhau < SCAN_KEY_GAP_MS (người gõ tay không nhanh vậy) và đủ dài.
+const SCAN_KEY_GAP_MS = 50;
+const MIN_SCAN_LENGTH_IN_INPUT = 4;
+
+/** Gán lại giá trị cho ô nhập React-controlled (để React nhận thay đổi). */
+function setNativeValue(el: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(el, value);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
 function isEditableTarget(el: Element | null): boolean {
   if (!el) return false;
@@ -26,6 +37,9 @@ export function GlobalOrderScanner() {
   const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
   const bufferRef = useRef('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastKeyAtRef = useRef(0);
+  // Giá trị ô nhập ngay trước loạt phím quét → trả lại sau khi nhận ra là máy quét
+  const snapshotRef = useRef<{ el: HTMLInputElement | HTMLTextAreaElement; value: string } | null>(null);
 
   useEffect(() => {
     async function processScan(code: string) {
@@ -66,7 +80,15 @@ export function GlobalOrderScanner() {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isEditableTarget(document.activeElement)) return;
+      const active = document.activeElement;
+      if (isEditableTarget(active)) {
+        // Ô tự xử lý mã quét (vd trang Rà soát đơn) → để nguyên
+        if (active?.closest('[data-scan-own]')) return;
+        if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+          handleKeyInInput(event, active);
+        }
+        return;
+      }
 
       if (event.key === 'Enter') {
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -86,6 +108,33 @@ export function GlobalOrderScanner() {
       timerRef.current = setTimeout(() => {
         bufferRef.current = '';
       }, SCAN_DEBOUNCE_MS);
+    }
+
+    /** Máy quét gõ vào ô nhập: loạt phím rất nhanh + Enter → xử lý như quét, trả ô về như cũ. */
+    function handleKeyInInput(event: KeyboardEvent, el: HTMLInputElement | HTMLTextAreaElement) {
+      const now = performance.now();
+      const fast = now - lastKeyAtRef.current < SCAN_KEY_GAP_MS;
+      lastKeyAtRef.current = now;
+
+      if (event.key === 'Enter') {
+        const code = bufferRef.current;
+        const snap = snapshotRef.current;
+        bufferRef.current = '';
+        snapshotRef.current = null;
+        if (fast && code.length >= MIN_SCAN_LENGTH_IN_INPUT && snap?.el === el) {
+          event.preventDefault();
+          setNativeValue(el, snap.value);
+          void processScan(code);
+        }
+        return;
+      }
+      if (event.key.length !== 1) return;
+      if (!fast || snapshotRef.current?.el !== el) {
+        // Bắt đầu loạt phím mới — nhớ giá trị ô trước khi ký tự này được gõ vào
+        bufferRef.current = '';
+        snapshotRef.current = { el, value: el.value };
+      }
+      bufferRef.current += event.key;
     }
 
     window.addEventListener('keydown', handleKeyDown);
