@@ -27,6 +27,8 @@ export interface ShopSettings {
   openingCash: number | string;
   /** Chi phí mặc định mỗi ngày khi chốt két (mặc định 25k) */
   defaultExpenses: number | string;
+  /** Giờ đóng cửa "HH:mm" — nhắc chốt két trước 10 phút */
+  closeTime: string;
   bankBin: string | null;
   bankAccountNumber: string | null;
   bankAccountName: string | null;

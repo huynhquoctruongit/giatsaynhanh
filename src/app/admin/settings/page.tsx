@@ -353,6 +353,7 @@ export default function SettingsPage() {
   const [smallOrderNote, setSmallOrderNote] = useState('');
   const [openingCash, setOpeningCash] = useState('750000');
   const [defaultExpenses, setDefaultExpenses] = useState('25000');
+  const [closeTime, setCloseTime] = useState('21:30');
   const [bankBin, setBankBin] = useState('');
   const [bankAccountNumber, setBankAccountNumber] = useState('');
   const [bankAccountName, setBankAccountName] = useState('');
@@ -392,6 +393,7 @@ export default function SettingsPage() {
     setSmallOrderNote(d.smallOrderNote ?? '');
     setOpeningCash(String(Number(d.openingCash ?? 750000)));
     setDefaultExpenses(String(Number(d.defaultExpenses ?? 25000)));
+    setCloseTime(d.closeTime ?? '21:30');
     setBankBin(d.bankBin ?? '');
     setBankAccountNumber(d.bankAccountNumber ?? '');
     setBankAccountName(d.bankAccountName ?? '');
@@ -443,6 +445,7 @@ export default function SettingsPage() {
       smallOrderNote: smallOrderNote.trim() || null,
       openingCash: Number(openingCash) || 0,
       defaultExpenses: Number(defaultExpenses) || 0,
+      ...(/^([01]\d|2[0-3]):[0-5]\d$/.test(closeTime) ? { closeTime } : {}),
       bankBin: bankBin || null,
       bankAccountNumber: bankAccountNumber || null,
       bankAccountName: bankAccountName || null,
@@ -604,6 +607,13 @@ export default function SettingsPage() {
                       placeholder="25.000"
                     />
                     <p className="text-xs text-muted-foreground">Điền sẵn vào ô chi phí khi chốt két — nhân viên vẫn sửa được.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Giờ đóng cửa</Label>
+                    <Input type="time" className="w-40" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} />
+                    <p className="text-xs text-muted-foreground">
+                      Trước giờ này 10 phút, nếu chưa chốt két thì nút Chốt két rung + kêu nhắc nhân viên.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Thông báo cho đơn &quot;Dưới 3kg&quot;</Label>

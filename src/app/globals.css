@@ -172,3 +172,14 @@
     animation: none;
   }
 }
+
+/* Nút chốt két rung khi đến giờ (giờ đóng cửa − 10 phút) mà chưa chốt */
+@keyframes cash-shake {
+  0%, 60%, 100% { transform: rotate(0) scale(1); }
+  10%, 30%, 50% { transform: rotate(-12deg) scale(1.08); }
+  20%, 40% { transform: rotate(12deg) scale(1.08); }
+}
+.cash-alert {
+  animation: cash-shake 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 6px rgb(225 29 72 / 0.2);
+}

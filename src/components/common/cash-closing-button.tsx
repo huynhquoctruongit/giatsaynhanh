@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   AlertCircle,
   AlertTriangle,
+  BellRing,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -46,6 +47,73 @@ function Line({ label, value, muted, strong }: { label: string; value: string; m
   );
 }
 
+/** Nhắc trước giờ đóng cửa bao nhiêu phút / lặp lại tiếng nhắc mỗi … phút cho tới khi chốt */
+const REMIND_BEFORE_MIN = 10;
+const REPEAT_REMIND_MIN = 5;
+
+/** Tiếng "bíp bíp" (WebAudio, không cần file âm thanh) + đọc câu nhắc tiếng Việt nếu trình duyệt hỗ trợ. */
+function playReminder() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    [0, 0.35, 0.7].forEach((at) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime + at);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + at + 0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + at);
+      osc.stop(ctx.currentTime + at + 0.25);
+    });
+    setTimeout(() => ctx.close(), 1500);
+  } catch {
+    // trình duyệt chặn âm thanh khi chưa có thao tác người dùng — bỏ qua
+  }
+  try {
+    const u = new SpeechSynthesisUtterance('Sắp đến giờ đóng cửa, vui lòng chốt két');
+    u.lang = 'vi-VN';
+    setTimeout(() => window.speechSynthesis?.speak(u), 1100);
+  } catch {
+    // không hỗ trợ đọc giọng nói
+  }
+  navigator.vibrate?.([400, 200, 400, 200, 400]);
+}
+
+/**
+ * Đến (giờ đóng cửa − 10') mà hôm nay chưa chốt két → trả true (nút rung) và phát tiếng nhắc,
+ * lặp lại mỗi 5' cho tới khi chốt. `withSound` = chỉ nút đang hiển thị mới kêu (tránh kêu 2 lần).
+ */
+function useCloseReminder(closeTime: string | undefined, closed: boolean, ready: boolean, withSound: () => boolean) {
+  const [alerting, setAlerting] = useState(false);
+  const lastRemindAt = useRef(0);
+  useEffect(() => {
+    if (!ready || closed || !closeTime || !/^\d{2}:\d{2}$/.test(closeTime)) {
+      setAlerting(false);
+      return;
+    }
+    const [h, m] = closeTime.split(':').map(Number);
+    const check = () => {
+      const now = new Date();
+      const remindAt = new Date(now);
+      remindAt.setHours(h, m - REMIND_BEFORE_MIN, 0, 0);
+      const due = now >= remindAt;
+      setAlerting(due);
+      if (due && withSound() && Date.now() - lastRemindAt.current >= REPEAT_REMIND_MIN * 60_000) {
+        lastRemindAt.current = Date.now();
+        playReminder();
+      }
+    };
+    check();
+    const t = setInterval(check, 30_000);
+    return () => clearInterval(t);
+  }, [closeTime, closed, ready, withSound]);
+  return alerting;
+}
+
+const isWide = () => window.matchMedia('(min-width: 768px)').matches;
+const isNarrow = () => !isWide();
+
 // Trang có thanh nút cố định ở đáy (vd "Tạo đơn") → ẩn nút nổi trên điện thoại
 const HIDE_FAB_ON = ['/admin/orders/new'];
 
@@ -61,8 +129,15 @@ export function CashClosingButton({ placement }: { placement: 'header' | 'fab' }
     queryKey: ['cash-closing', 'preview'],
     queryFn: () => cashClosingApi.preview(),
     staleTime: 60_000,
+    refetchInterval: 5 * 60_000, // cập nhật trạng thái đã chốt (máy khác chốt) để tắt nhắc
   });
   const closed = Boolean(preview.data?.closing);
+  const alerting = useCloseReminder(
+    preview.data?.closeTime,
+    closed,
+    !!preview.data,
+    placement === 'header' ? isWide : isNarrow,
+  );
 
   const openDialog = () => {
     preview.refetch();
@@ -82,10 +157,13 @@ export function CashClosingButton({ placement }: { placement: 'header' | 'fab' }
         <button
           type="button"
           onClick={openDialog}
-          className="relative hidden h-11 items-center gap-2 rounded-full bg-indigo-600 px-5 font-semibold text-white shadow-md transition hover:bg-indigo-700 active:scale-95 md:inline-flex"
+          className={cn(
+            'relative hidden h-11 items-center gap-2 rounded-full px-5 font-semibold text-white shadow-md transition active:scale-95 md:inline-flex',
+            alerting ? 'cash-alert bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700',
+          )}
         >
-          <Wallet className="h-5 w-5" />
-          {closed ? 'Đã chốt két' : 'Chốt két'}
+          {alerting ? <BellRing className="h-5 w-5" /> : <Wallet className="h-5 w-5" />}
+          {closed ? 'Đã chốt két' : alerting ? 'Đến giờ chốt két!' : 'Chốt két'}
           {doneBadge}
         </button>
       ) : (
@@ -95,9 +173,12 @@ export function CashClosingButton({ placement }: { placement: 'header' | 'fab' }
           aria-label="Chốt két"
           onClick={openDialog}
           // Ngay trên nút "Vào ca" (bottom-6, cao 3.5rem) — chỉ hiện trên điện thoại
-          className="fixed bottom-[5.75rem] right-5 z-[15] mb-[env(safe-area-inset-bottom)] flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition hover:bg-indigo-700 active:scale-95 md:hidden"
+          className={cn(
+            'fixed bottom-[5.75rem] right-5 z-[15] mb-[env(safe-area-inset-bottom)] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition active:scale-95 md:hidden',
+            alerting ? 'cash-alert bg-rose-600' : 'bg-indigo-600 hover:bg-indigo-700',
+          )}
         >
-          <Wallet className="h-7 w-7" />
+          {alerting ? <BellRing className="h-7 w-7" /> : <Wallet className="h-7 w-7" />}
           {doneBadge}
         </button>
       )}
@@ -256,7 +337,7 @@ function ClosedSummary({ c }: { c: CashClosing }) {
 }
 
 /** Sổ chốt két theo tháng — hiện ngay sau khi chốt. Chủ tiệm xoá được để chốt lại. */
-function ClosingBook() {
+export function ClosingBook({ showSummary = false }: { showSummary?: boolean }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
@@ -300,9 +381,13 @@ function ClosingBook() {
         <p className="text-sm text-muted-foreground">Chưa có ngày nào chốt két trong tháng.</p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground">
-            {data.totals.days} ngày · tổng lệch {formatCurrency(data.totals.difference)} ({data.totals.mismatchDays} ngày lệch)
-          </p>
+          {showSummary ? (
+            <MonthSummary totals={data.totals} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {data.totals.days} ngày · tổng lệch {formatCurrency(data.totals.difference)} ({data.totals.mismatchDays} ngày lệch)
+            </p>
+          )}
           <div className="space-y-2">
             {data.items.map((c) => {
               const t = diffTone(Number(c.difference));
@@ -354,6 +439,38 @@ function ClosingBook() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Tổng hợp tháng: tổng lệch nổi bật + số ngày, đã thu, chuyển khoản, chi phí */
+function MonthSummary({ totals }: { totals: import('@/services/api/cash-closing.api').CashClosingMonth['totals'] }) {
+  const t = diffTone(totals.difference);
+  return (
+    <div className="space-y-3">
+      <div className={cn('rounded-xl p-4 text-center', t.cls)}>
+        <p className="text-sm font-medium">Tổng lệch trong tháng</p>
+        <p className="text-3xl font-extrabold">
+          {totals.difference === 0
+            ? 'Không lệch'
+            : `${totals.difference < 0 ? 'Thiếu' : 'Dư'} ${formatCurrency(Math.abs(totals.difference))}`}
+        </p>
+        <p className="text-sm">
+          {totals.days} ngày đã chốt · {totals.mismatchDays} ngày lệch
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {[
+          { label: 'Tổng đã thu', value: totals.collected },
+          { label: 'Tổng chuyển khoản', value: totals.transfers },
+          { label: 'Tổng chi phí', value: totals.expenses },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl border p-3">
+            <p className="text-xs text-muted-foreground">{s.label}</p>
+            <p className="text-lg font-bold">{formatCurrency(s.value)}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
