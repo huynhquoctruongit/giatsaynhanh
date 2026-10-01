@@ -240,7 +240,8 @@ function NewOrderForm() {
     mutation.mutate();
   }
 
-  const priorityProducts = (productsQuery.data?.items ?? []).slice(0, 4);
+  // Dịch vụ hiện sẵn = 5 dịch vụ đầu theo thứ tự ưu tiên (kéo-thả ở màn Dịch vụ)
+  const priorityProducts = (productsQuery.data?.items ?? []).slice(0, QUICK_PRODUCT_COUNT);
   const filteredProducts = (productsQuery.data?.items ?? []).filter((p) =>
     p.name.toLowerCase().includes(productSearch.trim().toLowerCase()),
   );
@@ -679,6 +680,9 @@ function NewOrderForm() {
     </div>
   );
 }
+
+/** Số dịch vụ hiện sẵn ở mục "Chọn dịch vụ" (còn lại nằm trong nút "… Thêm") */
+const QUICK_PRODUCT_COUNT = 5;
 
 export default function NewOrderPage() {
   return (

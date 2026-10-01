@@ -84,6 +84,13 @@ export interface Order {
   discountAmount?: number;
   /** Tổng khách đã chuyển khoản cho đơn (khớp tự động theo mã đơn trong nội dung CK) */
   transferredAmount?: number | string;
+  /** Mốc thu tiền (null + đã giao = đơn nợ) và người bấm "Đã thanh toán" */
+  paidAt?: string | null;
+  paidBy?: { id: string; name: string } | null;
+  /** Lần bấm "Đơn nợ" gần nhất (giữ lại cả sau khi đã thu nợ) */
+  debtMarkedAt?: string | null;
+  debtMarkedBy?: { id: string; name: string } | null;
+  isDebt?: boolean;
   note: string | null;
   pickupAt: string | null;
   deliveredAt: string | null;
@@ -184,7 +191,7 @@ export interface ScanHistoryEntry {
   id: string;
   orderId: string;
   userId: string | null;
-  action: 'VIEW' | 'UPDATE_STATUS';
+  action: 'VIEW' | 'UPDATE_STATUS' | 'MARK_DEBT' | 'MARK_PAID';
   ip: string | null;
   userAgent: string | null;
   meta: Record<string, unknown> | null;

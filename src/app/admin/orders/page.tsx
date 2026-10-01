@@ -27,6 +27,13 @@ import {
   type OrderStatus,
 } from '@/helpers/enums/order-status';
 import { useDebounce } from '@/hooks/use-debounce';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const ALL = '__ALL__';
 const BOOKING = 'BOOKING';
@@ -44,6 +51,9 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search);
   const [status, setStatus] = useState<string>(ALL);
+  // Lọc theo loại dịch vụ (ALL = mọi dịch vụ)
+  const [productId, setProductId] = useState<string>(ALL);
+  const productFilter = productId === ALL ? undefined : productId;
 
   // Lọc theo ngày — mặc định Hôm nay
   const [dateMode, setDateMode] = useState<'today' | 'yesterday' | 'custom'>('today');
@@ -61,18 +71,26 @@ export default function OrdersPage() {
   const dateTo = new Date(`${activeDateStr}T23:59:59.999`).toISOString();
 
   const countsQuery = useQuery({
-    queryKey: ['orders', 'status-counts', { dateFrom, dateTo }],
-    queryFn: () => orderApi.statusCounts({ dateFrom, dateTo }),
+    queryKey: ['orders', 'status-counts', { dateFrom, dateTo, productFilter }],
+    queryFn: () => orderApi.statusCounts({ dateFrom, dateTo, productId: productFilter }),
+    staleTime: 30_000,
+  });
+
+  // Dropdown "Loại dịch vụ": số đơn từng dịch vụ trong ngày đang xem, nhiều → ít
+  const productCountsQuery = useQuery({
+    queryKey: ['orders', 'product-counts', { dateFrom, dateTo }],
+    queryFn: () => orderApi.productCounts({ dateFrom, dateTo }),
     staleTime: 30_000,
   });
 
   const query = useQuery({
-    queryKey: ['orders', { search: debounced, status, dateFrom, dateTo }],
+    queryKey: ['orders', { search: debounced, status, dateFrom, dateTo, productFilter }],
     queryFn: () =>
       orderApi.list({
         search: debounced || undefined,
         status: status === ALL || status === BOOKING ? undefined : (status as OrderStatus),
         fromBooking: status === BOOKING ? true : undefined,
+        productId: productFilter,
         // BE bỏ qua lọc ngày khi đang search (tìm xuyên suốt mọi ngày)
         dateFrom,
         dateTo,
@@ -144,6 +162,29 @@ export default function OrdersPage() {
                 : 'border-border bg-background text-muted-foreground hover:border-primary/50',
             )}
           />
+          {/* Lọc theo loại dịch vụ — kèm số đơn trong ngày để biết dịch vụ nào dùng nhiều nhất */}
+          <Select value={productId} onValueChange={setProductId}>
+            <SelectTrigger
+              className={cn(
+                'h-8 w-auto min-w-48 rounded-full text-sm',
+                productFilter && 'border-primary font-semibold text-primary',
+              )}
+            >
+              <SelectValue placeholder="Loại dịch vụ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Tất cả dịch vụ</SelectItem>
+              {(productCountsQuery.data ?? []).map((p) => (
+                <SelectItem key={p.productId} value={p.productId}>
+                  {p.name} ({p.orderCount} đơn)
+                </SelectItem>
+              ))}
+              {/* Đang chọn dịch vụ không có đơn ở ngày mới → vẫn giữ lựa chọn */}
+              {productFilter && !(productCountsQuery.data ?? []).some((p) => p.productId === productFilter) && (
+                <SelectItem value={productFilter}>Dịch vụ đã chọn (0 đơn)</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
           {debounced && (
             <span className="text-xs text-muted-foreground">
               (đang tìm kiếm — bỏ qua lọc ngày)

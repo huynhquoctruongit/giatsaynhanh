@@ -462,6 +462,21 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
   );
 }
 
+/** Nhãn 1 dòng lịch sử đơn (scan, đổi trạng thái, đơn nợ, thu nợ) */
+function historyLabel(h: { action: string; meta: Record<string, unknown> | null }) {
+  const amount = typeof h.meta?.amount === 'number' ? ` ${formatCurrency(h.meta.amount)}` : '';
+  switch (h.action) {
+    case 'MARK_DEBT':
+      return `💰 Đánh dấu đơn nợ${amount}`;
+    case 'MARK_PAID':
+      return `✅ Đã thanh toán${amount}`;
+    case 'UPDATE_STATUS':
+      return 'Cập nhật trạng thái';
+    default:
+      return 'Xem QR';
+  }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -631,6 +646,29 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 <p className="text-xs text-muted-foreground">Đã giao lúc</p>
                 <p className="font-medium">{formatDateTime(order.deliveredAt)}</p>
               </div>
+              {/* Đơn nợ: thời điểm + người bấm "Đơn nợ" / "Đã thanh toán" */}
+              {order.debtMarkedAt && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Đánh dấu nợ lúc</p>
+                  <p className="font-medium text-rose-600">
+                    {formatDateTime(order.debtMarkedAt)}
+                    {order.debtMarkedBy && <span className="font-normal text-muted-foreground"> · {order.debtMarkedBy.name}</span>}
+                  </p>
+                </div>
+              )}
+              {order.debtMarkedAt && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Đã thanh toán (thu nợ) lúc</p>
+                  {order.paidAt ? (
+                    <p className="font-medium text-emerald-600">
+                      {formatDateTime(order.paidAt)}
+                      {order.paidBy && <span className="font-normal text-muted-foreground"> · {order.paidBy.name}</span>}
+                    </p>
+                  ) : (
+                    <p className="font-medium text-rose-600">Chưa thanh toán</p>
+                  )}
+                </div>
+              )}
               <div>
                 <p className="text-xs text-muted-foreground">Ghi chú</p>
                 <p className="text-sm">{order.note || '-'}</p>
@@ -666,7 +704,7 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <History className="h-4 w-4" />
-              <CardTitle>Lịch sử scan</CardTitle>
+              <CardTitle>Lịch sử đơn</CardTitle>
             </CardHeader>
             <CardContent>
               {historyQuery.isLoading ? (
@@ -679,7 +717,7 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
                     <div key={h.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
                       <div>
                         <p className="font-medium">
-                          {h.action === 'UPDATE_STATUS' ? 'Cập nhật trạng thái' : 'Xem QR'}{' '}
+                          {historyLabel(h)}{' '}
                           {h.user ? `· ${h.user.name}` : '· Khách (ẩn danh)'}
                         </p>
                         <p className="text-xs text-muted-foreground">

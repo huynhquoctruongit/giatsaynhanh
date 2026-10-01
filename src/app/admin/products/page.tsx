@@ -41,7 +41,7 @@ export default function ProductsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => productApi.remove(id),
     onSuccess: () => {
-      toast.success('Đã ẩn sản phẩm');
+      toast.success('Đã xoá dịch vụ');
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (err) => toast.error(extractError(err).message),
@@ -134,19 +134,23 @@ export default function ProductsPage() {
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      {p.isActive && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (confirm(`Ẩn sản phẩm "${p.name}"?`)) {
-                              deleteMutation.mutate(p.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-rose-600" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Xoá dịch vụ"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              `Xoá dịch vụ "${p.name}"?\nDịch vụ sẽ biến mất khỏi danh sách và không chọn được khi tạo đơn. Các đơn cũ đã dùng dịch vụ này vẫn giữ nguyên.`,
+                            )
+                          ) {
+                            deleteMutation.mutate(p.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-rose-600" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

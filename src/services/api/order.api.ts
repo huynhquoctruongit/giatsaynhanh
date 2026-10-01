@@ -11,6 +11,8 @@ export interface OrderListQuery {
   search?: string;
   status?: OrderStatus;
   customerId?: string;
+  /** Lọc đơn có dùng dịch vụ này */
+  productId?: string;
   fromBooking?: boolean;
   debt?: boolean;
   dateFrom?: string;
@@ -35,8 +37,13 @@ export interface CreateOrderPayload {
 }
 
 export const orderApi = {
-  statusCounts: (query: { dateFrom?: string; dateTo?: string } = {}) =>
+  statusCounts: (query: { dateFrom?: string; dateTo?: string; productId?: string } = {}) =>
     unwrap<Record<string, number>>(apiClient.get('/orders/status-counts', { params: query })),
+  /** Số đơn theo từng loại dịch vụ trong ngày, nhiều → ít (dropdown lọc dịch vụ) */
+  productCounts: (query: { dateFrom?: string; dateTo?: string } = {}) =>
+    unwrap<{ productId: string; name: string; orderCount: number }[]>(
+      apiClient.get('/orders/product-counts', { params: query }),
+    ),
   list: (query: OrderListQuery = {}) =>
     unwrap<PaginatedResult<Order>>(apiClient.get('/orders', { params: query })),
   detail: (id: string) => unwrap<Order>(apiClient.get(`/orders/${id}`)),
