@@ -197,18 +197,6 @@ function NewOrderForm() {
     );
   }
 
-  function setQuantityInput(i: number, value: string) {
-    const qty = Math.max(1, parseInt(value, 10) || 1);
-    setItems((arr) =>
-      arr.map((it, idx) => {
-        if (idx !== i) return it;
-        const product = productsQuery.data?.items.find((p) => p.id === it.productId);
-        const price = product?.wholesaleEnabled ? getEffectivePrice(product, qty) : it.unitPrice;
-        return { ...it, quantity: qty, unitPrice: price };
-      }),
-    );
-  }
-
   function updateWeight(i: number, value: string) {
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, weight: value.replace(',', '.') } : it)));
   }
@@ -423,45 +411,43 @@ function NewOrderForm() {
                         <Trash2 className="h-4 w-4 text-rose-600" />
                       </Button>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    {/* SL chỉ bấm +/− (không gõ được) và thu gọn — tránh nhầm gõ cân vào SL làm nhân đôi tiền.
+                        Ô Cân (kg) viền xanh để nhân viên chú ý nhập đúng chỗ. */}
+                    <div className="grid grid-cols-[auto_1fr_1fr] gap-2">
                       <div>
                         <Label className="text-xs">SL</Label>
-                        <div className="flex items-center gap-1">
-                          <Button
+                        <div className="flex h-9 items-center rounded-md border">
+                          <button
                             type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 shrink-0"
+                            className="flex h-full w-8 items-center justify-center text-muted-foreground hover:bg-muted disabled:opacity-40"
                             onClick={() => adjustQuantity(i, -1)}
+                            disabled={it.quantity <= 1}
+                            aria-label="Giảm số lượng"
                           >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={it.quantity}
-                            onChange={(e) => setQuantityInput(i, e.target.value)}
-                            className="text-center"
-                          />
-                          <Button
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="min-w-6 select-none text-center text-sm font-semibold tabular-nums">
+                            {it.quantity}
+                          </span>
+                          <button
                             type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-9 w-9 shrink-0"
+                            className="flex h-full w-8 items-center justify-center text-muted-foreground hover:bg-muted"
                             onClick={() => adjustQuantity(i, 1)}
+                            aria-label="Tăng số lượng"
                           >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                       <div>
-                        <Label className="text-xs">Cân (kg)</Label>
+                        <Label className="text-xs font-semibold text-blue-600">Cân (kg)</Label>
                         <Input
                           type="text"
                           inputMode="decimal"
-                          placeholder="—"
+                          placeholder="Nhập kg"
                           value={it.weight}
                           onChange={(e) => updateWeight(i, e.target.value)}
+                          className="border-2 border-blue-500 bg-blue-50/40 font-semibold focus-visible:ring-blue-500 dark:bg-blue-950/20"
                         />
                       </div>
                       <div>
