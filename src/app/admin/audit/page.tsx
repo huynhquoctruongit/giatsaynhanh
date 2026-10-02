@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  History,
   Package,
   PackageSearch,
   RotateCcw,
@@ -17,20 +20,37 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
 import { orderApi } from '@/services/api/order.api';
-import { cn, formatCurrency } from '@/lib/utils';
+import { auditApi } from '@/services/api/audit.api';
+import { extractError } from '@/services/api/client';
+import { useAuth } from '@/hooks/use-auth';
+import { cn, formatCurrency, matchScannedOrder, orderCodeSuffix } from '@/lib/utils';
 import type { Order } from '@/types/api';
 
 type BagState = 'pending' | 'verified' | 'anomaly';
 interface AuditEntry {
   order: Order;
   state: BagState;
+  /** Ai quét (từ máy chủ — có thể là máy khác) */
+  auditedBy?: string;
+  auditedAt?: string;
 }
 
+/** Đồng bộ kết quả quét giữa các máy mỗi … ms khi đang mở trang */
+const SYNC_INTERVAL_MS = 3000;
+
+const hhmm = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
+
 export default function AuditPage() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [scanValue, setScanValue] = useState('');
-  const [auditMap, setAuditMap] = useState<Map<string, AuditEntry>>(new Map());
   const [lastScanned, setLastScanned] = useState<string | null>(null);
+  // Quét trên máy này nhưng máy chủ chưa xác nhận → hiện ngay cho mượt
+  const [optimistic, setOptimistic] = useState<Map<string, BagState>>(new Map());
 
   // Tải tất cả đơn đã giặt xong chờ khách lấy (READY) — bịch trên kệ
   const ordersQuery = useQuery({
@@ -41,66 +61,117 @@ export default function AuditPage() {
     },
   });
 
-  // Khởi tạo map khi data về (giữ lại state đã scan + anomaly)
+  // Kết quả quét HÔM NAY của mọi máy — gọi lại liên tục để đồng bộ
+  const auditsQuery = useQuery({
+    queryKey: ['audits', 'today'],
+    queryFn: () => auditApi.today(),
+    refetchInterval: SYNC_INTERVAL_MS,
+  });
+
+  // Máy chủ đã xác nhận (hoặc máy khác "Bắt đầu lại") → bỏ bản tạm
   useEffect(() => {
-    if (!ordersQuery.data) return;
-    setAuditMap((prev) => {
-      const next = new Map<string, AuditEntry>();
-      for (const o of ordersQuery.data) {
-        const existing = prev.get(o.code);
-        next.set(o.code, { order: o, state: existing?.state ?? 'pending' });
-      }
-      for (const [code, entry] of prev) {
-        if (entry.state === 'anomaly' && !next.has(code)) next.set(code, entry);
-      }
-      return next;
+    if (!auditsQuery.data) return;
+    setOptimistic((prev) => {
+      if (prev.size === 0) return prev;
+      const serverCodes = new Set(auditsQuery.data.items.map((a) => a.order.code));
+      const next = new Map([...prev].filter(([code]) => !serverCodes.has(code)));
+      return next.size === prev.size ? prev : next;
     });
-  }, [ordersQuery.data]);
+  }, [auditsQuery.data]);
+
+  /** Máy chủ là nguồn chuẩn; optimistic chỉ lấp khoảng trễ của lần quét trên máy này. */
+  const auditMap = useMemo(() => {
+    const map = new Map<string, AuditEntry>();
+    const server = new Map((auditsQuery.data?.items ?? []).map((a) => [a.order.code, a]));
+    for (const o of ordersQuery.data ?? []) {
+      const a = server.get(o.code);
+      map.set(o.code, {
+        order: o,
+        state: a ? (a.result === 'ANOMALY' ? 'anomaly' : 'verified') : optimistic.get(o.code) ?? 'pending',
+        auditedBy: a?.auditedBy.name,
+        auditedAt: a?.auditedAt,
+      });
+    }
+    for (const a of auditsQuery.data?.items ?? []) {
+      if (a.result === 'ANOMALY' && !map.has(a.order.code)) {
+        map.set(a.order.code, {
+          order: a.order as unknown as Order,
+          state: 'anomaly',
+          auditedBy: a.auditedBy.name,
+          auditedAt: a.auditedAt,
+        });
+      }
+    }
+    return map;
+  }, [ordersQuery.data, auditsQuery.data, optimistic]);
 
   // Giữ focus ô quét
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  /** Gửi kết quả quét lên máy chủ; bịch đã được máy khác quét → báo người quét trước */
+  async function pushAudit(order: Pick<Order, 'id'>, result: 'VERIFIED' | 'ANOMALY') {
+    try {
+      const res = await auditApi.mark(order.id, result);
+      if (res.duplicate) {
+        toast.info(`${res.audit.auditedBy.name} đã quét bịch này lúc ${hhmm(res.audit.auditedAt)}`, {
+          description: res.audit.order.customer?.name ?? res.audit.order.code,
+        });
+      }
+    } catch (err) {
+      toast.error('Chưa lưu được lần quét', { description: extractError(err).message });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ['audits', 'today'] });
+    }
+  }
+
   async function processScan(raw: string) {
     const code = raw.trim();
     if (code.length < 2) return;
-    setLastScanned(code);
 
-    const existing = auditMap.get(code);
-    if (existing) {
-      // Có trong list → đánh dấu đã quét (xanh)
-      setAuditMap((prev) => {
-        const next = new Map(prev);
-        const e = next.get(code);
-        if (e && e.state !== 'anomaly') next.set(code, { ...e, state: 'verified' });
-        return next;
-      });
+    // Mã quét có thể là mã đầy đủ hoặc đuôi mã in trên bịch
+    const v = code.toUpperCase();
+    const key = [...auditMap.keys()].find((k) => k.toUpperCase() === v || orderCodeSuffix(k).toUpperCase() === v);
+    if (key) {
+      setLastScanned(key);
+      const e = auditMap.get(key)!;
+      if (e.state === 'verified') {
+        toast.info(
+          e.auditedBy
+            ? `${e.auditedBy} đã quét bịch này${e.auditedAt ? ` lúc ${hhmm(e.auditedAt)}` : ''}`
+            : 'Bịch này đã quét rồi',
+          { description: e.order.customer?.name ?? key },
+        );
+        return;
+      }
+      if (e.state === 'anomaly') return;
+      setOptimistic((prev) => new Map(prev).set(key, 'verified'));
+      void pushAudit(e.order, 'VERIFIED');
       return;
     }
 
+    setLastScanned(code);
     // Không có trong list → tra cứu trạng thái thực
     try {
       const result = await orderApi.list({ search: code, pageSize: 5 });
-      const found = result.items.find((o) => o.code === code);
+      const found = matchScannedOrder(result.items, code);
       if (!found) {
         toast.error(`Không tìm thấy đơn: ${code}`);
         return;
       }
       if (found.status === 'DELIVERED') {
-        // Bất thường: hệ thống ghi đã giao nhưng đồ vẫn trên kệ
-        setAuditMap((prev) => {
-          const next = new Map(prev);
-          next.set(code, { order: found, state: 'anomaly' });
-          return next;
-        });
-        toast.warning(`Bất thường: ${code} đã được đánh dấu giao nhưng vẫn trên kệ`);
+        // Bất thường: hệ thống ghi đã giao nhưng đồ vẫn trên kệ → ghi lên máy chủ cho mọi máy thấy
+        setLastScanned(found.code);
+        void pushAudit(found, 'ANOMALY');
+        toast.warning(`Bất thường: ${found.code} đã được đánh dấu giao nhưng vẫn trên kệ`);
         return;
       }
       if (found.status === 'CANCELLED') {
-        toast.error(`Đơn đã huỷ: ${code}`);
+        toast.error(`Đơn đã huỷ: ${found.code}`);
         return;
       }
+      toast.info(`Đơn đang ở trạng thái ${found.status}`, { description: found.customer?.name ?? found.code });
     } catch {
       toast.error('Lỗi tra cứu đơn');
     }
@@ -115,17 +186,17 @@ export default function AuditPage() {
     }
   }
 
-  function resetAudit() {
-    setAuditMap((prev) => {
-      const next = new Map<string, AuditEntry>();
-      for (const [code, entry] of prev) {
-        if (entry.state === 'anomaly') continue; // bỏ anomaly khi reset
-        next.set(code, { ...entry, state: 'pending' });
-      }
-      return next;
-    });
-    setLastScanned(null);
-    toast.success('Đã reset rà soát');
+  async function resetAudit() {
+    if (!window.confirm('Bắt đầu rà soát lại?\nXoá kết quả quét hôm nay trên TẤT CẢ các máy (điện thoại + máy quét).')) return;
+    try {
+      await auditApi.resetToday();
+      setOptimistic(new Map());
+      setLastScanned(null);
+      queryClient.invalidateQueries({ queryKey: ['audits', 'today'] });
+      toast.success('Đã reset rà soát (mọi máy)');
+    } catch (err) {
+      toast.error(extractError(err).message);
+    }
     inputRef.current?.focus();
   }
 
@@ -210,7 +281,54 @@ export default function AuditPage() {
           ))}
         </div>
       )}
+
+      {/* Chủ tiệm: lịch sử rà soát theo ngày */}
+      {user?.role === 'ADMIN' && <AuditHistory />}
     </div>
+  );
+}
+
+function AuditHistory() {
+  const [cursor, setCursor] = useState(() => new Date());
+  const month = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+  const query = useQuery({ queryKey: ['audits', 'summary', month], queryFn: () => auditApi.summary(month) });
+  return (
+    <Card className="space-y-3 p-4">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 font-semibold">
+          <History className="h-4 w-4" /> Lịch sử rà soát
+        </p>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCursor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-semibold">{month.slice(5)}/{month.slice(0, 4)}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCursor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {query.isLoading ? (
+        <Skeleton className="h-20 w-full" />
+      ) : !query.data || query.data.days.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Chưa có ngày nào rà soát trong tháng.</p>
+      ) : (
+        <div className="space-y-2">
+          {query.data.days.map((d) => (
+            <div key={d.date} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">
+                  {d.date.split('-').reverse().slice(0, 2).join('/')} · {hhmm(d.firstAt)}–{hhmm(d.lastAt)}
+                </p>
+                <p className="text-xs text-muted-foreground">{d.users.map((u) => `${u.name} ${u.count} bịch`).join(' · ')}</p>
+              </div>
+              <span className="font-bold text-emerald-600">{d.verified} bịch</span>
+              {d.anomaly > 0 && <span className="font-semibold text-rose-600">{d.anomaly} bất thường</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -261,6 +379,12 @@ function BagCard({ entry, pulse }: { entry: AuditEntry; pulse: boolean }) {
       <p className="line-clamp-1 text-center text-sm font-bold">{order.customer?.name ?? '—'}</p>
       <p className="font-mono text-[10px] text-muted-foreground">{order.code}</p>
       <p className={cn('text-xs font-semibold', iconColor)}>{formatCurrency(Number(order.totalAmount))}</p>
+      {entry.auditedBy && (
+        <p className="line-clamp-1 text-[10px] text-muted-foreground">
+          {entry.auditedBy}
+          {entry.auditedAt ? ` · ${hhmm(entry.auditedAt)}` : ''}
+        </p>
+      )}
     </div>
   );
 }

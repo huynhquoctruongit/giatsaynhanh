@@ -191,7 +191,7 @@ export interface ScanHistoryEntry {
   id: string;
   orderId: string;
   userId: string | null;
-  action: 'VIEW' | 'UPDATE_STATUS' | 'MARK_DEBT' | 'MARK_PAID';
+  action: 'VIEW' | 'UPDATE_STATUS' | 'MARK_DEBT' | 'MARK_PAID' | 'AUDIT';
   ip: string | null;
   userAgent: string | null;
   meta: Record<string, unknown> | null;

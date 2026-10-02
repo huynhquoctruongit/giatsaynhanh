@@ -470,6 +470,10 @@ function historyLabel(h: { action: string; meta: Record<string, unknown> | null 
       return `💰 Đánh dấu đơn nợ${amount}`;
     case 'MARK_PAID':
       return `✅ Đã thanh toán${amount}`;
+    case 'AUDIT':
+      return h.meta?.result === 'ANOMALY'
+        ? '🔍 Rà soát kệ — BẤT THƯỜNG (đã giao nhưng còn trên kệ)'
+        : '🔍 Rà soát kệ — có trên kệ';
     case 'UPDATE_STATUS':
       return 'Cập nhật trạng thái';
     default:
