@@ -69,7 +69,7 @@ function barcodeSvgHtml(value: string, width = 220, height = 46, quietZone = 8):
 }
 
 function vietQrUrl(settings: ShopSettings, amount: number, addInfo: string): string {
-  const url = `https://img.vietqr.io/image/${settings.bankBin}-${settings.bankAccountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}`;
+  const url = `https://img.vietqr.io/image/${settings.bankBin}-${settings.bankAccountNumber}-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}`;
   return settings.bankAccountName ? `${url}&accountName=${encodeURIComponent(settings.bankAccountName)}` : url;
 }
 
@@ -207,7 +207,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
 
   ${showBothQr ? `<div style="display:flex;justify-content:center;gap:8px;padding:2px 6px 4px">
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
-      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:90px;height:90px;display:block" />
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:110px;height:110px;display:block" />
     </div>
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
       <p style="font-size:${Math.max(sm - 2, 8)}px;font-weight:700;margin-bottom:3px">Đặt lịch giao nhận</p>
@@ -215,10 +215,10 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>` : `
     ${hasBankQr ? `<div style="text-align:center;padding:2px 10px 4px">
-      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:160px;height:160px;display:block;margin:0 auto" />
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:200px;height:200px;display:block;margin:0 auto" />
     </div>` : ''}
     ${hasBookingQr ? `<div style="text-align:center;padding:2px 10px 4px">
-      <img src="${bookingQrImgUrl(settings.bookingQrUrl, 160)}" style="width:160px;height:160px;display:block;margin:0 auto" />
+      <img src="${bookingQrImgUrl(settings.bookingQrUrl, 200)}" style="width:200px;height:200px;display:block;margin:0 auto" />
     </div>` : ''}
   `}
 
@@ -423,7 +423,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
             <img
               src={vietQrUrl(settings, grandTotal, order.code)}
               alt={`VietQR ${order.code}`}
-              style={{ width: 90, height: 90, display: 'block' }}
+              style={{ width: 110, height: 110, display: 'block' }}
             />
           </div>
           <div style={{ border: '1.5px solid #000', borderRadius: 6, padding: 6, textAlign: 'center' }}>
@@ -439,7 +439,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
               <img
                 src={vietQrUrl(settings, grandTotal, order.code)}
                 alt={`VietQR ${order.code}`}
-                style={{ width: 160, height: 160, display: 'block', margin: '0 auto' }}
+                style={{ width: 200, height: 200, display: 'block', margin: '0 auto' }}
               />
             </div>
           )}
