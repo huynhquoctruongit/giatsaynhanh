@@ -215,7 +215,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>` : `
     ${hasBankQr ? `<div style="text-align:center;padding:2px 10px 4px">
-      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:200px;height:200px;display:block;margin:0 auto" />
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:170px;height:170px;display:block;margin:0 auto" />
     </div>` : ''}
     ${hasBookingQr ? `<div style="text-align:center;padding:2px 10px 4px">
       <img src="${bookingQrImgUrl(settings.bookingQrUrl, 200)}" style="width:200px;height:200px;display:block;margin:0 auto" />
@@ -439,7 +439,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
               <img
                 src={vietQrUrl(settings, grandTotal, order.code)}
                 alt={`VietQR ${order.code}`}
-                style={{ width: 200, height: 200, display: 'block', margin: '0 auto' }}
+                style={{ width: 170, height: 170, display: 'block', margin: '0 auto' }}
               />
             </div>
           )}
