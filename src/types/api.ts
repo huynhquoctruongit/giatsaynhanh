@@ -24,6 +24,8 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  shopId?: string;
+  shopName?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -197,4 +199,12 @@ export interface ScanHistoryEntry {
   meta: Record<string, unknown> | null;
   scannedAt: string;
   user: { id: string; name: string; email: string; role: UserRole } | null;
+}
+
+export interface LinkedShop {
+  shopId: string;
+  shopName: string;
+  shopSlug: string;
+  email: string;
+  isCurrent: boolean;
 }

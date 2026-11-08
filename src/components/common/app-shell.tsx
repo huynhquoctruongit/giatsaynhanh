@@ -23,11 +23,13 @@ import {
   CalendarClock,
   HandCoins,
   Banknote,
+  Landmark,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { SubscriptionBanner } from '@/components/common/subscription-banner';
 import { TimeClockButton } from '@/components/common/time-clock-button';
 import { CashClosingButton } from '@/components/common/cash-closing-button';
+import { ShopSwitcher } from '@/components/common/shop-switcher';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +52,7 @@ const NAV_ITEMS = [
   { href: '/admin/products', label: 'Dịch vụ', icon: ShoppingBag },
   { href: '/admin/inventory', label: 'Kho hàng', icon: Warehouse },
   { href: '/admin/finance', label: 'Thu chi', icon: Wallet },
+  { href: '/admin/transfers', label: 'Chuyển khoản', icon: Landmark },
   { href: '/admin/debts', label: 'Sổ nợ', icon: BookOpen },
   { href: '/admin/shifts', label: 'Ca làm việc', icon: Clock },
   { href: '/admin/cash-closing', label: 'Chốt két', icon: Banknote },
@@ -92,6 +95,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-xs text-muted-foreground">Quản lý giặt sấy</p>
           </div>
         </div>
+        {isAdmin && (
+          <div className="border-b p-3">
+            <ShopSwitcher />
+          </div>
+        )}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {allNavItems.map((item) => {
             const active =

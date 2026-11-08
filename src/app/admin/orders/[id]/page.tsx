@@ -19,6 +19,7 @@ import { orderApi } from '@/services/api/order.api';
 import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
 import { calcInvoiceTotals } from '@/lib/invoice-totals';
+import { isPromoActive } from '@/lib/promo';
 import { calcLineTotal, formatCurrency, formatDateTime, isSmallOrder, orderCodeSuffix } from '@/lib/utils';
 import {
   NEXT_STATUS_TRANSITIONS,
@@ -29,6 +30,26 @@ import {
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
+
+/** Escape text chèn vào bản in HTML (dòng phụ, nhãn khuyến mãi do tiệm tự nhập) */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Nhãn dòng giảm giá: "Giảm giá Khai trương" nếu đơn tạo trong đợt khuyến mãi có nhãn */
+function discountLabel(settings: ShopSettings, createdAt: string): string {
+  const label = settings.promoLabel?.trim();
+  return label && isPromoActive(settings, new Date(createdAt)) ? `Giảm giá ${label}` : 'Giảm giá';
+}
+
+/** Bank QR (VietQR) — nhỏ hơn ~23% so với trước (110/170) cho bill gọn hơn */
+const BANK_QR_SIZE_PAIR = 85;
+const BANK_QR_SIZE_SINGLE = 130;
 
 function formatDateStr(iso: string) {
   const date = new Date(iso);
@@ -93,7 +114,8 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
   );
 
   const showShipping = shippingFee > 0;
-  const showDiscount = settings.invoiceShowDebt && discount > 0;
+  const showDiscount = discount > 0;
+  const subtitle = settings.invoiceSubtitle?.trim() ?? '';
   const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
@@ -146,6 +168,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
 
   <div style="padding: 10px 10px 4px; text-align: center;">
     ${settings.invoiceShowShopName ? `<p style="font-weight:900;font-size:${base + 4}px;text-transform:uppercase;letter-spacing:0.5px">${settings.shopName || 'TIỆM GIẶT'}</p>` : ''}
+    ${subtitle ? `<p style="font-weight:700;font-size:${base + 1}px">${escapeHtml(subtitle)}</p>` : ''}
     ${settings.invoiceShowPhone && settings.phone ? `<p style="font-weight:600">${settings.phone}</p>` : ''}
     ${settings.invoiceShowAddress && settings.address ? `<p style="font-size:${sm}px;color:#555">Địa chỉ: ${settings.address}</p>` : ''}
   </div>
@@ -191,9 +214,13 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     <div class="total-row" style="font-size:${sm}px;color:#555">
       <span>Phí ship</span><span>${shippingFee.toLocaleString('vi-VN')}đ</span>
     </div>` : ''}
+    ${showDiscount && !showShipping ? `
+    <div class="total-row" style="font-size:${sm}px;color:#555">
+      <span>Tạm tính</span><span>${subtotal.toLocaleString('vi-VN')}đ</span>
+    </div>` : ''}
     ${showDiscount ? `
     <div class="total-row" style="font-size:${sm}px;color:#555">
-      <span>Giảm giá</span><span>- ${discount.toLocaleString('vi-VN')}đ</span>
+      <span>${escapeHtml(discountLabel(settings, order.createdAt))}</span><span>- ${discount.toLocaleString('vi-VN')}đ</span>
     </div>` : ''}
     <div class="total-row bold" style="font-size:${base + 1}px">
       <span>TỔNG CỘNG</span><span>${grandTotal.toLocaleString('vi-VN')}đ</span>
@@ -207,7 +234,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
 
   ${showBothQr ? `<div style="display:flex;justify-content:center;gap:8px;padding:2px 6px 4px">
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
-      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:110px;height:110px;display:block" />
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:${BANK_QR_SIZE_PAIR}px;height:${BANK_QR_SIZE_PAIR}px;display:block" />
     </div>
     <div style="border:1.5px solid #000;border-radius:6px;padding:6px;text-align:center">
       <p style="font-size:${Math.max(sm - 2, 8)}px;font-weight:700;margin-bottom:3px">Đặt lịch giao nhận</p>
@@ -215,7 +242,7 @@ function buildReceiptHtml(order: OrderData, settings: ShopSettings): string {
     </div>
   </div>` : `
     ${hasBankQr ? `<div style="text-align:center;padding:2px 10px 4px">
-      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:170px;height:170px;display:block;margin:0 auto" />
+      <img src="${vietQrUrl(settings, grandTotal, order.code)}" style="width:${BANK_QR_SIZE_SINGLE}px;height:${BANK_QR_SIZE_SINGLE}px;display:block;margin:0 auto" />
     </div>` : ''}
     ${hasBookingQr ? `<div style="text-align:center;padding:2px 10px 4px">
       <img src="${bookingQrImgUrl(settings.bookingQrUrl, 200)}" style="width:200px;height:200px;display:block;margin:0 auto" />
@@ -275,7 +302,8 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
     settings,
   );
   const showShipping = shippingFee > 0;
-  const showDiscount = settings.invoiceShowDebt && discount > 0;
+  const showDiscount = discount > 0;
+  const subtitle = settings.invoiceSubtitle?.trim() ?? '';
   const hasBankQr = Boolean(settings.invoiceShowQR && settings.bankBin && settings.bankAccountNumber);
   const hasBookingQr = Boolean(settings.bookingQrEnabled && settings.bookingQrUrl);
   const showBothQr = hasBankQr && hasBookingQr;
@@ -298,6 +326,9 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
           <p style={{ fontWeight: 900, fontSize: base + 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {settings.shopName || 'TIỆM GIẶT'}
           </p>
+        )}
+        {subtitle && (
+          <p style={{ fontWeight: 700, fontSize: base + 1 }}>{subtitle}</p>
         )}
         {settings.invoiceShowPhone && settings.phone && (
           <p style={{ fontWeight: 600 }}>{settings.phone}</p>
@@ -384,9 +415,15 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
             </div>
           </>
         )}
+        {showDiscount && !showShipping && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
+            <span>Tạm tính</span>
+            <span>{subtotal.toLocaleString('vi-VN')}đ</span>
+          </div>
+        )}
         {showDiscount && (
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sm, color: '#555' }}>
-            <span>Giảm giá</span>
+            <span>{discountLabel(settings, order.createdAt)}</span>
             <span>- {discount.toLocaleString('vi-VN')}đ</span>
           </div>
         )}
@@ -423,7 +460,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
             <img
               src={vietQrUrl(settings, grandTotal, order.code)}
               alt={`VietQR ${order.code}`}
-              style={{ width: 110, height: 110, display: 'block' }}
+              style={{ width: BANK_QR_SIZE_PAIR, height: BANK_QR_SIZE_PAIR, display: 'block' }}
             />
           </div>
           <div style={{ border: '1.5px solid #000', borderRadius: 6, padding: 6, textAlign: 'center' }}>
@@ -439,7 +476,7 @@ function InvoicePreviewPanel({ order, settings }: { order: OrderData & { code: s
               <img
                 src={vietQrUrl(settings, grandTotal, order.code)}
                 alt={`VietQR ${order.code}`}
-                style={{ width: 170, height: 170, display: 'block', margin: '0 auto' }}
+                style={{ width: BANK_QR_SIZE_SINGLE, height: BANK_QR_SIZE_SINGLE, display: 'block', margin: '0 auto' }}
               />
             </div>
           )}
@@ -702,6 +739,20 @@ function OrderDetailContent({ params }: { params: Promise<{ id: string }> }) {
                 <p className="text-sm font-medium">Tổng cộng</p>
                 <p className="text-xl font-bold">{formatCurrency(order.totalAmount)}</p>
               </div>
+              {Number(order.discountAmount ?? 0) > 0 && (
+                <>
+                  <div className="mt-1 flex items-center justify-between text-sm text-emerald-700">
+                    <p>{settings ? discountLabel(settings, order.createdAt) : 'Giảm giá'}</p>
+                    <p className="font-medium">-{formatCurrency(Number(order.discountAmount))}</p>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <p className="text-sm font-medium">Sau giảm</p>
+                    <p className="text-lg font-bold">
+                      {formatCurrency(Number(order.totalAmount) - Number(order.discountAmount))}
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

@@ -20,6 +20,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => void;
+  switchShop: (shopId: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -58,6 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }, []);
 
+  // Chủ quản lý nhiều tiệm: đổi sang token của tiệm khác rồi tải lại trang
+  // để xoá sạch cache dữ liệu (react-query, state) của tiệm cũ.
+  const switchShop = useCallback(async (shopId: string) => {
+    const data = await authApi.switchShop(shopId);
+    window.localStorage.setItem(STORAGE_KEYS.token, data.token);
+    window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(data.user));
+    setTokenCookie(data.token);
+    window.location.href = '/admin/dashboard';
+  }, []);
+
   const logout = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEYS.token);
     window.localStorage.removeItem(STORAGE_KEYS.user);
@@ -83,9 +94,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout,
+      switchShop,
       refresh,
     }),
-    [user, isLoading, login, logout, refresh],
+    [user, isLoading, login, logout, switchShop, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

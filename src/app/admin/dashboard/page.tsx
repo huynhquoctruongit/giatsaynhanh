@@ -203,8 +203,16 @@ export default function DashboardPage() {
           {/* Chuyển khoản gần đây (GPM Pay) */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Chuyển khoản gần đây</CardTitle>
-              <Landmark className="h-4 w-4 text-teal-600" />
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Landmark className="h-4 w-4 text-teal-600" />
+                Chuyển khoản gần đây
+              </CardTitle>
+              <Link
+                href="/admin/transfers"
+                className="inline-flex items-center gap-1 text-xs font-medium text-teal-700 hover:underline"
+              >
+                Xem lịch sử <ArrowRight className="h-3 w-3" />
+              </Link>
             </CardHeader>
             <CardContent className="space-y-2">
               {bankQuery.isLoading ? (

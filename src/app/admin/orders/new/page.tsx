@@ -25,6 +25,7 @@ import { orderApi } from '@/services/api/order.api';
 import { settingsApi } from '@/services/api/settings.api';
 import { extractError } from '@/services/api/client';
 import { calcLineTotal, cn, formatCurrency, getEffectivePrice } from '@/lib/utils';
+import { calcPromoDiscount, isPromoActive, promoBadgeText } from '@/lib/promo';
 import type { Customer, Product } from '@/types/api';
 
 /** Tên dòng phí giao hàng — thêm vào items khi tích "Giao hàng tận nhà". */
@@ -136,6 +137,19 @@ function NewOrderForm() {
 
   const total = items.reduce((sum, i) => sum + calcLineTotal(i), 0);
 
+  // Đợt giảm giá toàn tiệm (khai trương…) — BE tự trừ khi lưu đơn; ở đây chỉ hiện ước tính.
+  // Sửa đơn: BE chỉ tính lại nếu đơn được tạo trong đợt giảm → so theo ngày tạo đơn.
+  const promoSettings = settingsQuery.data;
+  const promoAt = isEditMode && editQuery.data?.createdAt ? new Date(editQuery.data.createdAt) : new Date();
+  const promoActive = isPromoActive(promoSettings, promoAt);
+  const existingDiscount = Number(editQuery.data?.discountAmount ?? 0);
+  const promoDiscount = promoActive
+    ? calcPromoDiscount(promoSettings, total + deliveryFee, promoAt)
+    : isEditMode
+      ? Math.min(existingDiscount, total + deliveryFee)
+      : 0;
+  const payable = total + deliveryFee - promoDiscount;
+
   function orderPayload() {
     return {
       customerId,
@@ -235,7 +249,7 @@ function NewOrderForm() {
   );
 
   return (
-    <div className="space-y-6 pb-32">
+    <div className="space-y-6 pb-44">
       <PageHeader
         title={isEditMode ? 'Sửa đơn' : 'Tạo đơn giặt sấy'}
         description={isEditMode ? 'Cập nhật thông tin & sản phẩm của đơn' : 'Chọn khách, chạm dịch vụ để thêm vào giỏ'}
@@ -655,7 +669,23 @@ function NewOrderForm() {
             )}
             <div>
               <p className="text-xs text-muted-foreground">Tổng cộng</p>
-              <p className="text-2xl font-bold">{formatCurrency(total + deliveryFee)}</p>
+              <p className={cn('font-bold', promoDiscount > 0 ? 'text-base text-muted-foreground line-through' : 'text-2xl')}>
+                {formatCurrency(total + deliveryFee)}
+              </p>
+              {promoDiscount > 0 && (
+                <>
+                  <p className="text-xs font-medium text-emerald-700">
+                    {promoActive && promoSettings
+                      ? `Giảm giá ${promoBadgeText(promoSettings)}`
+                      : 'Giảm giá'}
+                    : -{formatCurrency(promoDiscount)}
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(payable)}
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">(cần thu)</span>
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <Button size="lg" onClick={handleSubmit} disabled={mutation.isPending}>

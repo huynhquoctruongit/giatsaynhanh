@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/common/page-header';
-import { settingsApi, type ShopSettings } from '@/services/api/settings.api';
+import { settingsApi, type PromoType, type ShopSettings } from '@/services/api/settings.api';
+import { isPromoActive, vnDateStr } from '@/lib/promo';
 import { extractError } from '@/services/api/client';
 
 type Tab = 'shop' | 'invoice' | 'features';
@@ -77,7 +78,7 @@ interface PreviewProps {
   showLogo: boolean; showShopName: boolean; showPhone: boolean;
   showAddress: boolean; showWebsite: boolean; showBarcode: boolean;
   showQr: boolean; showDebt: boolean; openingHours: string;
-  bookingQrEnabled: boolean; invoiceNote: string;
+  bookingQrEnabled: boolean; invoiceNote: string; invoiceSubtitle: string;
 }
 
 function ReceiptPreview(p: PreviewProps) {
@@ -101,6 +102,11 @@ function ReceiptPreview(p: PreviewProps) {
         {p.showShopName && (
           <p className="font-extrabold uppercase leading-tight tracking-wide" style={{ fontSize: base + 4 }}>
             {p.shopName || 'GIẶT SẤY NHANH'}
+          </p>
+        )}
+        {p.invoiceSubtitle.trim() && (
+          <p className="font-bold leading-tight" style={{ fontSize: base + 1 }}>
+            {p.invoiceSubtitle.trim()}
           </p>
         )}
         {p.showPhone && p.phone && <p className="font-semibold">{p.phone}</p>}
@@ -351,6 +357,7 @@ export default function SettingsPage() {
   const [openingHours, setOpeningHours] = useState('');
   const [invoiceNote, setInvoiceNote] = useState('');
   const [smallOrderNote, setSmallOrderNote] = useState('');
+  const [invoiceSubtitle, setInvoiceSubtitle] = useState('');
   const [openingCash, setOpeningCash] = useState('750000');
   const [defaultExpenses, setDefaultExpenses] = useState('25000');
   const [closeTime, setCloseTime] = useState('21:30');
@@ -368,6 +375,14 @@ export default function SettingsPage() {
   const [freeShipThreshold, setFreeShipThreshold] = useState('');
   const [allowNoShiftOrder, setAllowNoShiftOrder] = useState(true);
   const [bookingQrEnabled, setBookingQrEnabled] = useState(true);
+
+  // Giảm giá toàn bộ dịch vụ (vd khai trương)
+  const [promoEnabled, setPromoEnabled] = useState(false);
+  const [promoType, setPromoType] = useState<PromoType>('PERCENT');
+  const [promoValue, setPromoValue] = useState('');
+  const [promoStartDate, setPromoStartDate] = useState('');
+  const [promoEndDate, setPromoEndDate] = useState('');
+  const [promoLabel, setPromoLabel] = useState('');
 
   useEffect(() => {
     if (!data) return;
@@ -391,6 +406,7 @@ export default function SettingsPage() {
     setOpeningHours(d.openingHours ?? '');
     setInvoiceNote(d.invoiceNote ?? '');
     setSmallOrderNote(d.smallOrderNote ?? '');
+    setInvoiceSubtitle(d.invoiceSubtitle ?? '');
     setOpeningCash(String(Number(d.openingCash ?? 750000)));
     setDefaultExpenses(String(Number(d.defaultExpenses ?? 25000)));
     setCloseTime(d.closeTime ?? '21:30');
@@ -407,6 +423,12 @@ export default function SettingsPage() {
     setFreeShipThreshold(d.freeShipThreshold?.toString() ?? '');
     setAllowNoShiftOrder(d.allowNoShiftOrder ?? true);
     setBookingQrEnabled(d.bookingQrEnabled ?? true);
+    setPromoEnabled(d.promoEnabled ?? false);
+    setPromoType(d.promoType === 'AMOUNT' ? 'AMOUNT' : 'PERCENT');
+    setPromoValue(Number(d.promoValue ?? 0) > 0 ? String(Number(d.promoValue)) : '');
+    setPromoStartDate(d.promoStartDate ?? '');
+    setPromoEndDate(d.promoEndDate ?? '');
+    setPromoLabel(d.promoLabel ?? '');
   }, [data]);
 
   const banksQuery = useQuery({
@@ -443,6 +465,7 @@ export default function SettingsPage() {
       openingHours: openingHours || null,
       invoiceNote: invoiceNote || null,
       smallOrderNote: smallOrderNote.trim() || null,
+      invoiceSubtitle: invoiceSubtitle.trim() || null,
       openingCash: Number(openingCash) || 0,
       defaultExpenses: Number(defaultExpenses) || 0,
       ...(/^([01]\d|2[0-3]):[0-5]\d$/.test(closeTime) ? { closeTime } : {}),
@@ -463,6 +486,46 @@ export default function SettingsPage() {
       bookingQrEnabled,
     } as any);
   }
+
+  function savePromo() {
+    const value = Number(promoValue) || 0;
+    if (promoEnabled && value <= 0) {
+      toast.error('Nhập mức giảm lớn hơn 0');
+      return;
+    }
+    if (promoType === 'PERCENT' && value > 100) {
+      toast.error('Giảm theo % tối đa 100');
+      return;
+    }
+    if (promoStartDate && promoEndDate && promoStartDate > promoEndDate) {
+      toast.error('Ngày kết thúc phải sau ngày bắt đầu');
+      return;
+    }
+    updateMutation.mutate({
+      promoEnabled,
+      promoType,
+      promoValue: value,
+      promoStartDate: promoStartDate || null,
+      promoEndDate: promoEndDate || null,
+      promoLabel: promoLabel.trim() || null,
+    });
+  }
+
+  // Trạng thái đợt giảm theo cài đặt ĐÃ LƯU (BE trả promoActiveNow)
+  const promoStatus = (() => {
+    if (!data) return null;
+    if (data.promoActiveNow ?? isPromoActive(data)) {
+      return { label: 'Đang áp dụng', className: 'bg-emerald-100 text-emerald-700' };
+    }
+    if (!data.promoEnabled || !(Number(data.promoValue ?? 0) > 0)) {
+      return { label: 'Đang tắt', className: 'bg-muted text-muted-foreground' };
+    }
+    const today = vnDateStr();
+    if (data.promoStartDate && today < data.promoStartDate) {
+      return { label: 'Chưa tới ngày', className: 'bg-amber-100 text-amber-700' };
+    }
+    return { label: 'Đã hết hạn', className: 'bg-rose-100 text-rose-700' };
+  })();
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'shop', label: 'Thông tin cửa hàng' },
@@ -566,6 +629,16 @@ export default function SettingsPage() {
                   <Toggle checked={invoiceShowWebsite} onChange={setInvoiceShowWebsite} label="Hiện website" />
                   <Toggle checked={invoiceShowBarcode} onChange={setInvoiceShowBarcode} label="Hiện mã vạch (barcode)" />
                   <Toggle checked={invoiceShowDebt} onChange={setInvoiceShowDebt} label="Hiện nợ cũ & còn phải thu" />
+                  <div className="space-y-2 pt-3">
+                    <Label>Dòng phụ dưới tên tiệm (vd: Cơ sở 1)</Label>
+                    <Input
+                      value={invoiceSubtitle}
+                      maxLength={100}
+                      onChange={(e) => setInvoiceSubtitle(e.target.value)}
+                      placeholder="Cơ sở 1"
+                    />
+                    <p className="text-xs text-muted-foreground">In đậm, căn giữa ngay dưới tên tiệm. Để trống sẽ không hiện.</p>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -685,6 +758,7 @@ export default function SettingsPage() {
                   openingHours={openingHours}
                   bookingQrEnabled={bookingQrEnabled}
                   invoiceNote={invoiceNote}
+                  invoiceSubtitle={invoiceSubtitle}
                 />
               </div>
               <p className="text-xs text-muted-foreground text-center">Giả lập khổ giấy 80mm</p>
@@ -738,6 +812,94 @@ export default function SettingsPage() {
       {/* ── Features ── */}
       {tab === 'features' && (
         <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle>Giảm giá / Khuyến mãi</CardTitle>
+              {promoStatus && (
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${promoStatus.className}`}>
+                  {promoStatus.label}
+                </span>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Toggle checked={promoEnabled} onChange={setPromoEnabled} label="Bật giảm giá toàn bộ dịch vụ" />
+              <p className="-mt-2 text-xs text-muted-foreground">
+                Tiền giảm tự trừ vào tổng bill, hết ngày kết thúc tự hết giảm.
+              </p>
+              {promoEnabled && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Loại giảm</Label>
+                    <Select value={promoType} onValueChange={(v) => setPromoType(v as PromoType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PERCENT">Giảm theo % tổng đơn</SelectItem>
+                        <SelectItem value="AMOUNT">Giảm số tiền cố định mỗi đơn</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{promoType === 'PERCENT' ? 'Mức giảm (%)' : 'Số tiền giảm mỗi đơn (VND)'}</Label>
+                    {promoType === 'PERCENT' ? (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={promoValue}
+                        onChange={(e) => setPromoValue(e.target.value)}
+                        placeholder="20"
+                      />
+                    ) : (
+                      <Input
+                        inputMode="numeric"
+                        value={promoValue ? Number(promoValue).toLocaleString('vi-VN') : ''}
+                        onChange={(e) => setPromoValue(e.target.value.replace(/\D/g, ''))}
+                        placeholder="10.000"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Từ ngày</Label>
+                    <Input
+                      type="date"
+                      value={promoStartDate}
+                      max={promoEndDate || undefined}
+                      onChange={(e) => setPromoStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Đến ngày</Label>
+                    <Input
+                      type="date"
+                      value={promoEndDate}
+                      min={promoStartDate || undefined}
+                      onChange={(e) => setPromoEndDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Nhãn hiện trên bill</Label>
+                    <Input
+                      value={promoLabel}
+                      maxLength={50}
+                      onChange={(e) => setPromoLabel(e.target.value)}
+                      placeholder="Khai trương"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Bill in dòng &quot;Giảm giá {promoLabel.trim() || 'Khai trương'}&quot;. Để trống ngày = không giới hạn. Giảm theo % làm tròn xuống 1.000đ.
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button onClick={savePromo} disabled={updateMutation.isPending}>
+                  <Save className="h-4 w-4" />{updateMutation.isPending ? 'Đang lưu…' : 'Lưu khuyến mãi'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader><CardTitle>Tích điểm khách hàng</CardTitle></CardHeader>
             <CardContent className="space-y-4">

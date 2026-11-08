@@ -1,5 +1,7 @@
 import { apiClient, unwrap } from './client';
 
+export type PromoType = 'PERCENT' | 'AMOUNT';
+
 export interface ShopSettings {
   id: string;
   shopSlug: string;
@@ -23,6 +25,21 @@ export interface ShopSettings {
   openingHours: string | null;
   invoiceNote: string | null;
   smallOrderNote: string | null;
+  /** Dòng phụ in dưới tên tiệm trên bill (vd "Cơ sở 1"), tối đa 100 ký tự */
+  invoiceSubtitle: string | null;
+  /** Giảm giá toàn bộ dịch vụ (vd khai trương) — BE tự trừ vào đơn khi tạo/sửa */
+  promoEnabled: boolean;
+  promoType: PromoType;
+  /** % (≤ 100) hoặc số tiền mỗi đơn — Decimal có thể về dạng string */
+  promoValue: number | string;
+  /** YYYY-MM-DD (giờ VN), gồm cả ngày này */
+  promoStartDate: string | null;
+  /** YYYY-MM-DD (giờ VN), gồm cả ngày này */
+  promoEndDate: string | null;
+  /** Nhãn hiện trên bill, vd "Khai trương" */
+  promoLabel: string | null;
+  /** (chỉ đọc) Đợt giảm đang áp dụng hôm nay */
+  promoActiveNow: boolean;
   /** Tiền lẻ để sẵn trong két đầu ngày (mặc định 750k) — dùng khi chốt két */
   openingCash: number | string;
   /** Chi phí mặc định mỗi ngày khi chốt két (mặc định 25k) */
@@ -57,6 +74,7 @@ export type SettingsPayload = Partial<
     | 'subscriptionEndsAt'
     | 'currentPlan'
     | 'subscriptionDaysRemaining'
+    | 'promoActiveNow'
   >
 >;
 
