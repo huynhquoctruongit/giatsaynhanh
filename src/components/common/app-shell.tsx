@@ -24,6 +24,7 @@ import {
   HandCoins,
   Banknote,
   Landmark,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { SubscriptionBanner } from '@/components/common/subscription-banner';
@@ -62,6 +63,7 @@ const NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
   { href: '/admin/staff', label: 'Nhân viên', icon: UserCog },
+  { href: '/admin/deleted-orders', label: 'Đơn đã xoá', icon: Trash2 },
   { href: '/admin/settings', label: 'Cài đặt', icon: Settings },
 ];
 
