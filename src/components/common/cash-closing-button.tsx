@@ -332,6 +332,29 @@ function ClosedSummary({ c }: { c: CashClosing }) {
         <t.Icon className="h-5 w-5" /> {t.text}
       </div>
       {c.note && <p className="text-sm text-muted-foreground">Lý do: {c.note}</p>}
+      <OwnerTake c={c} />
+    </div>
+  );
+}
+
+/** Thu thêm sau giờ chốt + tiền chủ tiệm lấy (chủ tiệm hôm sau mới tới lấy tiền) */
+function OwnerTake({ c }: { c: CashClosing }) {
+  if (c.ownerTake == null) return null;
+  const after = c.afterClose?.cash ?? 0;
+  return (
+    <div className="space-y-1 rounded-lg border border-dashed p-3">
+      {after > 0 && (
+        <Line
+          label={`+ Thu thêm sau chốt (${c.afterClose?.orderCount ?? 0} đơn)`}
+          value={formatCurrency(after)}
+        />
+      )}
+      <Line label="− Để lại két đầu ngày" value={formatCurrency(Number(c.openingCash))} muted />
+      <Line
+        label={c.ownerTake >= 0 ? 'Tiền chủ tiệm lấy' : 'Cần bù vào két'}
+        value={formatCurrency(Math.abs(c.ownerTake))}
+        strong
+      />
     </div>
   );
 }
@@ -406,6 +429,11 @@ export function ClosingBook({ showSummary = false }: { showSummary?: boolean }) 
                       <p className="text-xs text-muted-foreground">
                         Két {formatCurrency(Number(c.countedCash))} / phải có {formatCurrency(Number(c.expectedCash))}
                       </p>
+                      {(c.afterClose?.cash ?? 0) > 0 && (
+                        <p className="text-xs font-semibold text-blue-700">
+                          + {formatCurrency(c.afterClose!.cash)} thu sau chốt
+                        </p>
+                      )}
                     </div>
                     <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold', t.cls)}>{t.text}</span>
                   </button>
@@ -415,8 +443,10 @@ export function ClosingBook({ showSummary = false }: { showSummary?: boolean }) 
                       <Line label="+ Đã thu" value={formatCurrency(Number(c.collected))} />
                       <Line label="− Chuyển khoản" value={formatCurrency(Number(c.transfers))} muted />
                       <Line label="− Chi phí" value={formatCurrency(Number(c.expenses))} muted />
+                      <Line label="Két đếm được" value={formatCurrency(Number(c.countedCash))} />
                       <p className="text-xs text-muted-foreground">Chốt lúc {formatDateTime(c.createdAt)}</p>
                       {c.note && <p className="text-sm text-muted-foreground">Lý do: {c.note}</p>}
+                      <OwnerTake c={c} />
                       {isAdmin && (
                         <Button
                           variant="outline"
@@ -464,6 +494,8 @@ function MonthSummary({ totals }: { totals: import('@/services/api/cash-closing.
           { label: 'Tổng đã thu', value: totals.collected },
           { label: 'Tổng chuyển khoản', value: totals.transfers },
           { label: 'Tổng chi phí', value: totals.expenses },
+          ...(totals.afterCloseCash != null ? [{ label: 'Thu thêm sau chốt', value: totals.afterCloseCash }] : []),
+          ...(totals.ownerTake != null ? [{ label: 'Tổng tiền chủ tiệm lấy', value: totals.ownerTake }] : []),
         ].map((s) => (
           <div key={s.label} className="rounded-xl border p-3">
             <p className="text-xs text-muted-foreground">{s.label}</p>
